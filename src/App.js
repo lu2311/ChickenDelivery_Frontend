@@ -1,25 +1,90 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState } from "react";
+import "./App.css";
 
-function App() {
+import { productosIniciales, clientesIniciales, pedidosIniciales, usuariosIniciales, promocionesIniciales } from "./components/data/iniciales";
+
+import PantallaLogin from "./components/data/auth/PantallaLogin";
+import LayoutEmpleado from "./components/data/empleado/LayoutEmpleado";
+import LayoutAdmin from "./components/data/admin/LayoutAdmin";
+import Notificacion from "./components/data/common/Notificacion";
+
+export default function App() {
+  const [sesionActiva, setSesionActiva] = useState(false);
+  const [rolUsuario, setRolUsuario] = useState("empleado");
+  const [pantallaActual, setPantallaActual] = useState("login");
+  const [notificacion, setNotificacion] = useState(null);
+  const [usuarioActual, setUsuarioActual] = useState(null);
+  const [productos, setProductos] = useState(productosIniciales);
+  const [clientes, setClientes] = useState(clientesIniciales);
+  const [pedidos, setPedidos] = useState(pedidosIniciales);
+  const [usuarios, setUsuarios] = useState(usuariosIniciales);
+  const [promociones, setPromociones] = useState(promocionesIniciales);
+
+  const mostrarNotificacion = (msg) => {
+    setNotificacion(msg);
+    setTimeout(() => setNotificacion(null), 2500);
+  };
+
+  const manejarLogin = (usuario) => {
+    setUsuarioActual(usuario);
+    setRolUsuario(usuario.rol);
+
+    setSesionActiva(true);
+
+    setPantallaActual(
+      usuario.rol === "admin"
+        ? "admin-panel"
+        : "empleado-home"
+    );
+  };
+
+const manejarSalir = () => {
+  setSesionActiva(false);
+  setUsuarioActual(null);
+  setPantallaActual("login");
+};
+
+  const navegar = (pantalla) => setPantallaActual(pantalla);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      {notificacion && <Notificacion mensaje={notificacion} />}
+
+      {!sesionActiva && <PantallaLogin onLogin={manejarLogin} />}
+
+      {sesionActiva && rolUsuario === "empleado" && (
+        <LayoutEmpleado
+          pantalla={pantallaActual}
+          navegar={navegar}
+          setPantalla={setPantallaActual}
+          usuario={usuarioActual}
+          onSalir={manejarSalir}
+          clientes={clientes}
+          setClientes={setClientes}
+          pedidos={pedidos}
+          setPedidos={setPedidos}
+          productos={productos}
+          mostrarNotificacion={mostrarNotificacion}
+        />
+      )}
+
+      {sesionActiva && rolUsuario === "admin" && (
+        <LayoutAdmin
+          pantalla={pantallaActual}
+          navegar={navegar}
+          setPantalla={setPantallaActual}
+          onSalir={manejarSalir}
+          productos={productos}
+          setProductos={setProductos}
+          clientes={clientes}
+          pedidos={pedidos}
+          usuarios={usuarios}
+          setUsuarios={setUsuarios}
+          promociones={promociones}
+          setPromociones={setPromociones}
+          mostrarNotificacion={mostrarNotificacion}
+        />
+      )}
+    </>
   );
 }
-
-export default App;
