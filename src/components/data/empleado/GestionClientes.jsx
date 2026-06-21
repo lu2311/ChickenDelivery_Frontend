@@ -17,6 +17,7 @@ export default function GestionClientes({
 
   const [form, setForm] = useState({
     nombre: "",
+    dni: "",
     telefono: "",
     direccion: ""
   });
@@ -24,7 +25,8 @@ export default function GestionClientes({
   const clientesFiltrados = clientes.filter(
     (c) =>
       c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      c.telefono.includes(busqueda)
+      c.telefono.includes(busqueda) ||
+      (c.dni && c.dni.includes(busqueda))
   );
 
   const abrirNuevo = () => {
@@ -32,6 +34,7 @@ export default function GestionClientes({
 
     setForm({
       nombre: "",
+      dni: "",
       telefono: "",
       direccion: ""
     });
@@ -44,6 +47,7 @@ export default function GestionClientes({
 
     setForm({
       nombre: c.nombre,
+      dni: c.dni || "",
       telefono: c.telefono,
       direccion: c.direccion
     });
@@ -51,33 +55,39 @@ export default function GestionClientes({
     setModalAbierto(true);
   };
 
-  const guardar = () => {
-    if (!form.nombre) return;
 
-    if (clienteEdicion) {
-      setClientes((prev) =>
-        prev.map((c) =>
-          c.id === clienteEdicion.id
-            ? { ...c, ...form }
-            : c
-        )
-      );
+const guardar = () => {
+  if (!form.nombre) return;
 
-      mostrarNotificacion("Cliente actualizado");
-    } else {
-      setClientes((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          ...form
-        }
-      ]);
+  if (form.dni && !/^\d{8}$/.test(form.dni)) {
+    mostrarNotificacion("El DNI debe tener 8 dígitos");
+    return;
+  }
 
-      mostrarNotificacion("Cliente registrado");
-    }
+  if (clienteEdicion) {
+    setClientes((prev) =>
+      prev.map((c) =>
+        c.id === clienteEdicion.id
+          ? { ...c, ...form }
+          : c
+      )
+    );
 
-    setModalAbierto(false);
-  };
+    mostrarNotificacion("Cliente actualizado");
+  } else {
+    setClientes((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        ...form
+      }
+    ]);
+
+    mostrarNotificacion("Cliente registrado");
+  }
+
+  setModalAbierto(false);
+};
 
   const eliminar = (id) => {
     setClientes((prev) =>
@@ -107,7 +117,7 @@ export default function GestionClientes({
         <img src={lupa} alt="Lupa" style={{ width: '28px', height: '28px' }} />
         <input
           style={{ fontSize: "1rem" }}
-          placeholder="Buscar por nombre o teléfono..."
+          placeholder="Buscar por nombre, DNI o teléfono..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
@@ -123,9 +133,10 @@ export default function GestionClientes({
         <thead>
           <tr>
             <th>Nombre</th>
+            <th>DNI</th>
             <th>Teléfono</th>
             <th>Dirección</th>
-            <th>Acciones</th>
+            {/*<th>Acciones</th>*/}
           </tr>
         </thead>
 
@@ -133,10 +144,11 @@ export default function GestionClientes({
           {clientesFiltrados.map((c) => (
             <tr key={c.id}>
               <td style={{ fontSize: "0.95rem" }}>{c.nombre}</td>
+              <td style={{ fontSize: "0.95rem" }}>{c.dni}</td>
               <td style={{ fontSize: "0.95rem" }}>{c.telefono}</td>
               <td style={{ fontSize: "0.95rem" }}>{c.direccion}</td>
 
-              <td>
+              {/*<td>
                 <button className="btn-accion editar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => abrirEdicion(c)}>
                   <img src={lapiz} alt="Editar" style={{ width: '25px', height: '25px' }} />
                 </button>
@@ -144,7 +156,7 @@ export default function GestionClientes({
                 <button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(c.id)}>
                   <img src={basura} alt="Basura" style={{ width: '25px', height: '25px' }} />
                 </button>
-              </td>
+              </td>*/}
             </tr>
           ))}
         </tbody>
@@ -166,6 +178,8 @@ export default function GestionClientes({
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Nombre*" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} />
+
+            <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="DNI" value={form.dni} onChange={(e) => setForm((f) => ({ ...f, dni: e.target.value }))} />
 
             <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Teléfono" value={form.telefono} onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))} />
 

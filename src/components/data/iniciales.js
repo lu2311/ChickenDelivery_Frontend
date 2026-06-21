@@ -6,8 +6,8 @@ export const productosIniciales = [
 ];
 
 export const clientesIniciales = [
-  { id: 1, nombre: "María García", telefono: "987654321", direccion: "Av. Principal 123" },
-  { id: 2, nombre: "Carlos López", telefono: "912345686", direccion: "Jr. Los Pinos 456" },
+  { id: 1, nombre: "María García", dni:"77424866" ,telefono: "987654321", direccion: "Av. Principal 123" },
+  { id: 2, nombre: "Carlos López", dni:"77424848" ,telefono: "912345686", direccion: "Jr. Los Pinos 456" },
 ];
 
 export const pedidosIniciales = [

@@ -106,9 +106,9 @@ export default function GestionUsuarios({
                     <img src={lapiz} alt="Editar" style={{ width: '25px', height: '25px' }} />
                   </button>
 
-                  <button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(u.id)}>
+                  {/*<button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(u.id)}>
                     <img src={basura} alt="Basura" style={{ width: '25px', height: '25px' }} />
-                  </button>
+                  </button>*/}
                 </td>
               </tr>
             ))}

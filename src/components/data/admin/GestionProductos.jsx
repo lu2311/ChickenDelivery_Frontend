@@ -87,7 +87,7 @@ export default function GestionProductos({ productos, setProductos, mostrarNotif
                 <td>
                   <button className={`toggle-switch ${p.estado ? "toggle-on" : "toggle-off"}`} onClick={() => toggleEstado(p.id)} style={{ marginRight: 8, transform: "scale(1.1)" }} />
                   <button className="btn-accion editar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => abrirEdicion(p)}><img src={lapiz} alt="Editar" style={{ width: '25px', height: '25px' }} /></button>
-                  <button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(p.id)}><img src={basura} alt="Basura" style={{ width: '25px', height: '25px' }} /></button>
+                  {/*<button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(p.id)}><img src={basura} alt="Basura" style={{ width: '25px', height: '25px' }} /></button>*/}
                 </td>
               </tr>
             ))}
