@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 
 import { productosIniciales, clientesIniciales, pedidosIniciales, usuariosIniciales, promocionesIniciales } from "./components/data/iniciales";
@@ -25,6 +25,17 @@ export default function App() {
     setTimeout(() => setNotificacion(null), 2500);
   };
 
+  useEffect(() => {
+    const usuarioGuardado = localStorage.getItem("usuario");
+    if (usuarioGuardado) {
+      const user = JSON.parse(usuarioGuardado);
+      setUsuarioActual(user);
+      setRolUsuario(user.rol === "Administrador" ? "admin" : "empleado");
+      setSesionActiva(true);
+      setPantallaActual(user.rol === "Administrador" ? "admin-panel" : "empleado-home");
+    }
+  }, []);
+
   const manejarLogin = (usuario) => {
     setUsuarioActual(usuario);
     setRolUsuario(usuario.rol);
@@ -38,11 +49,13 @@ export default function App() {
     );
   };
 
-const manejarSalir = () => {
-  setSesionActiva(false);
-  setUsuarioActual(null);
-  setPantallaActual("login");
-};
+  const manejarSalir = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuario");
+    setSesionActiva(false);
+    setUsuarioActual(null);
+    setPantallaActual("login");
+  };
 
   const navegar = (pantalla) => setPantallaActual(pantalla);
 
