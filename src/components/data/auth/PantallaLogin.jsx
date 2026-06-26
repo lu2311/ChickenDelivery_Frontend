@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { authService } from "../../../services/authService";
 import pollo from '../icons/pollo.png';
 
 export default function PantallaLogin({ onLogin }) {
@@ -6,19 +7,20 @@ export default function PantallaLogin({ onLogin }) {
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
 
-  const manejarSubmit = () => {
-if (contrasena === "admin") {
-  onLogin({
-    nombre: usuario,
-    rol: "admin"
-  });
-} else if (contrasena === "empleado") {
-  onLogin({
-    nombre: usuario,
-    rol: "empleado"
-  });
-}
+  const manejarSubmit = async () => {
+    try {
+      const data = await authService.login(usuario, contrasena);
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("usuario", JSON.stringify(data));
+      onLogin({
+        nombre: data.nombre,
+        rol: data.rol === "Administrador" ? "admin" : "empleado",
+      });
+    } catch (err) {
+      setError(err || "Credenciales incorrectas");
+    }
   };
+
 
 return (
   <div style={{ minHeight: "100vh", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
