@@ -1,12 +1,11 @@
 import { useState } from "react";
 import lupa from '../icons/lupa.png';
 import flecha_izq from '../icons/flecha-izquierda.png';
-import { clienteService, deliveryService, detalleVentaService, ventaService } from "../../../services/resourceServices";
+import { deliveryService, detalleVentaService, ventaService } from "../../../services/resourceServices";
 
 export default function NuevoPedido({
   navegar,
   clientes,
-  setClientes,
   productos,
   pedidos,
   setPedidos,
@@ -14,7 +13,10 @@ export default function NuevoPedido({
   usuario,
 }) {
   const [nombre, setNombre] = useState("");
-  const [dniTelefono, setDniTelefono] = useState("");
+  const [dni, setDni] = useState("");
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+  const [ventaAnonima, setVentaAnonima] = useState(false);
+  const [direccionEntrega, setDireccionEntrega] = useState("");
   const [metodoPago, setMetodoPago] = useState("Efectivo");
   const [tipoEntrega, setTipoEntrega] = useState("Recojo");
   const [canalVenta, setCanalVenta] = useState("Presencial");
@@ -73,22 +75,47 @@ export default function NuevoPedido({
   const costoDelivery = tipoEntrega === "Delivery" ? 3 : 0;
   const total = subtotalProductos + costoDelivery;
 
+  const manejarDni = (valor) => {
+    const nuevoDni = valor.replace(/\D/g, "").slice(0, 8);
+    setDni(nuevoDni);
+    setVentaAnonima(false);
+    const cliente = nuevoDni.length === 8
+      ? clientes.find((item) => item.dni === nuevoDni)
+      : null;
+    setClienteSeleccionado(cliente || null);
+    setNombre(cliente?.nombre || "");
+    setDireccionEntrega(cliente?.direccion || "");
+  };
+
+  const activarVentaAnonima = () => {
+    setVentaAnonima(true);
+    setClienteSeleccionado(null);
+    setNombre("Venta anónima");
+    setDireccionEntrega("");
+  };
+
   const registrarPedido = async () => {
-    if (!nombre || itemsPedido.length === 0) return;
+    if (!clienteSeleccionado && !ventaAnonima) {
+      mostrarNotificacion("Ingrese un DNI registrado o seleccione venta anónima", "error");
+      return;
+    }
+    if (itemsPedido.length === 0) {
+      mostrarNotificacion("Agregue al menos un producto", "error");
+      return;
+    }
+    if (tipoEntrega === "Delivery" && !direccionEntrega.trim()) {
+      mostrarNotificacion("Ingrese la dirección temporal de entrega", "error");
+      return;
+    }
 
     try {
-      let cliente = clientes.find((c) => c.dni === dniTelefono || c.telefono === dniTelefono);
-      if (!cliente) {
-        cliente = await clienteService.crear({ nombre, dni: /^\d{8}$/.test(dniTelefono) ? dniTelefono : null, telefono: /^\d{9}$/.test(dniTelefono) ? dniTelefono : null });
-        setClientes((prev) => [...prev, cliente]);
-      }
       const venta = await ventaService.crear({
         tipoEntrega,
         metodoPago,
         canalVenta,
         total,
         idUsuario: usuario.id,
-        idCliente: cliente.id,
+        idCliente: clienteSeleccionado?.id || null,
       });
       await Promise.all(itemsPedido.map((item) => detalleVentaService.crear({
         idVenta: venta.id,
@@ -98,13 +125,13 @@ export default function NuevoPedido({
         subtotal: item.precio * item.cantidad,
       })));
       if (tipoEntrega === "Delivery") {
-        await deliveryService.crear({ idVenta: venta.id, estadoDelivery: "Pendiente", costoDelivery });
+        await deliveryService.crear({ idVenta: venta.id, estadoDelivery: "Pendiente", costoDelivery, direccionEntrega });
       }
       const nuevoPedido = {
         ...venta,
         id: String(venta.id),
         fecha: new Date(venta.fechaVenta).toLocaleString("es-PE"),
-        cliente: cliente.nombre,
+        cliente: clienteSeleccionado?.nombre || "Venta anónima",
         total: Number(venta.total),
         comprobante: "Pendiente",
       };
@@ -136,9 +163,29 @@ export default function NuevoPedido({
             </div>
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <input className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} placeholder="Nombre*" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+              <input className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} placeholder="DNI (8 dígitos)" value={dni} onChange={(e) => manejarDni(e.target.value)} disabled={ventaAnonima} />
 
-              <input className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} placeholder="DNI o Teléfono*" value={dniTelefono} onChange={(e) => setDniTelefono(e.target.value)} />
+              <input className="campo-texto" style={{ flex: 1, minWidth: 180, padding: "12px", fontSize: "1rem" }} placeholder="Nombre del cliente" value={nombre} readOnly />
+
+              {clienteSeleccionado && (
+                <input className="campo-texto" style={{ flex: 1, minWidth: 160, padding: "12px", fontSize: "1rem" }} value={clienteSeleccionado.telefono || "Sin teléfono"} readOnly />
+              )}
+
+              {clienteSeleccionado && tipoEntrega !== "Delivery" && (
+                <input className="campo-texto" style={{ flex: "1 1 100%", padding: "12px", fontSize: "1rem" }} value={clienteSeleccionado.direccion || "Sin dirección registrada"} readOnly />
+              )}
+
+              {dni.length === 8 && !clienteSeleccionado && !ventaAnonima && (
+                <button type="button" className="btn-secundario" style={{ padding: "12px 16px" }} onClick={activarVentaAnonima}>
+                  VENTA ANÓNIMA
+                </button>
+              )}
+
+              {ventaAnonima && (
+                <button type="button" className="btn-secundario" style={{ padding: "12px 16px" }} onClick={() => manejarDni("")}>
+                  USAR CLIENTE REGISTRADO
+                </button>
+              )}
 
               <select className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
                 <option>Efectivo</option>
@@ -156,6 +203,10 @@ export default function NuevoPedido({
                 <option>WhatsApp</option>
                 <option>Telefono</option>
               </select>
+
+              {tipoEntrega === "Delivery" && (
+                <input className="campo-texto" style={{ flex: "1 1 100%", padding: "12px", fontSize: "1rem" }} placeholder={ventaAnonima ? "Dirección temporal de entrega*" : "Dirección de entrega*"} value={direccionEntrega} onChange={(e) => setDireccionEntrega(e.target.value)} />
+              )}
             </div>
           </div>
 

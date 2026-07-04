@@ -15,7 +15,7 @@ export default function LayoutEmpleado({ pantalla, navegar, onSalir, clientes, s
 
       <div className="contenido-centrado">
         {pantalla === "empleado-home" && <EmpleadoHome navegar={navegar} pedidos={pedidos} usuario={usuario} />}
-        {pantalla === "nuevo-pedido" && <NuevoPedido navegar={navegar} clientes={clientes} setClientes={setClientes} productos={productos} pedidos={pedidos} setPedidos={setPedidos} mostrarNotificacion={mostrarNotificacion} usuario={usuario} />}
+        {pantalla === "nuevo-pedido" && <NuevoPedido navegar={navegar} clientes={clientes} productos={productos} pedidos={pedidos} setPedidos={setPedidos} mostrarNotificacion={mostrarNotificacion} usuario={usuario} />}
         {pantalla === "clientes" && <GestionClientes navegar={navegar} clientes={clientes} setClientes={setClientes} mostrarNotificacion={mostrarNotificacion} esAdmin={false} />}
         {pantalla === "historial" && <HistorialPedidos navegar={navegar} pedidos={pedidos} />}
         {pantalla === "emitir-comprobante" && <EmitirComprobante navegar={navegar} pedidos={pedidos} setPedidos={setPedidos} mostrarNotificacion={mostrarNotificacion} />}
