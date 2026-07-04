@@ -17,6 +17,7 @@ export default function NuevoPedido({
   const [dniTelefono, setDniTelefono] = useState("");
   const [metodoPago, setMetodoPago] = useState("Efectivo");
   const [tipoEntrega, setTipoEntrega] = useState("Recojo");
+  const [canalVenta, setCanalVenta] = useState("Presencial");
   const [categoriaActiva, setCategoriaActiva] = useState("TODOS");
   const [busqueda, setBusqueda] = useState("");
   const [itemsPedido, setItemsPedido] = useState([]);
@@ -65,10 +66,12 @@ export default function NuevoPedido({
     );
   };
 
-  const total = itemsPedido.reduce(
+  const subtotalProductos = itemsPedido.reduce(
     (s, i) => s + i.precio * i.cantidad,
     0
   );
+  const costoDelivery = tipoEntrega === "Delivery" ? 3 : 0;
+  const total = subtotalProductos + costoDelivery;
 
   const registrarPedido = async () => {
     if (!nombre || itemsPedido.length === 0) return;
@@ -82,7 +85,7 @@ export default function NuevoPedido({
       const venta = await ventaService.crear({
         tipoEntrega,
         metodoPago,
-        canalVenta: "Presencial",
+        canalVenta,
         total,
         idUsuario: usuario.id,
         idCliente: cliente.id,
@@ -95,7 +98,7 @@ export default function NuevoPedido({
         subtotal: item.precio * item.cantidad,
       })));
       if (tipoEntrega === "Delivery") {
-        await deliveryService.crear({ idVenta: venta.id, estadoDelivery: "Pendiente", costoDelivery: 0 });
+        await deliveryService.crear({ idVenta: venta.id, estadoDelivery: "Pendiente", costoDelivery });
       }
       const nuevoPedido = {
         ...venta,
@@ -146,6 +149,12 @@ export default function NuevoPedido({
               <select className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={tipoEntrega} onChange={(e) => setTipoEntrega(e.target.value)}>
                 <option>Recojo</option>
                 <option>Delivery</option>
+              </select>
+
+              <select className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={canalVenta} onChange={(e) => setCanalVenta(e.target.value)}>
+                <option>Presencial</option>
+                <option>WhatsApp</option>
+                <option>Telefono</option>
               </select>
             </div>
           </div>
@@ -241,7 +250,10 @@ export default function NuevoPedido({
             )}
 
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, borderTop: "1px solid #eee", paddingTop: 10, marginBottom: 16, fontSize: "1rem" }}>
-              <span>Total</span>
+              <div>
+                <div>Total</div>
+                {costoDelivery > 0 && <small style={{ fontWeight: 400, color: "#777" }}>Incluye delivery: S/ {costoDelivery.toFixed(2)}</small>}
+              </div>
               <span>S/ {total.toFixed(2)}</span>
             </div>
 
