@@ -51,6 +51,7 @@ export default function App() {
         fecha: v.fechaVenta ? new Date(v.fechaVenta).toLocaleString("es-PE") : "",
         cliente: v.nombreCliente || "Sin cliente",
         total: Number(v.total),
+        comprobanteData: v.comprobante || null,
         comprobante: v.comprobante?.tipoComprobante || "Pendiente",
       })));
       setUsuarios(usuariosApi);

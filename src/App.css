@@ -542,6 +542,25 @@ body {
   background: #c0392b;
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .comprobante-preview,
+  .comprobante-preview * {
+    visibility: visible;
+  }
+
+  .comprobante-preview {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    border: 0;
+  }
+}
+
 @keyframes entradaNotif {
   from {
     transform: translateY(20px);

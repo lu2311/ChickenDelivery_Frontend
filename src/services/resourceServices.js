@@ -18,7 +18,10 @@ export const ventaService = {
 };
 export const detalleVentaService = crud("/detalles-venta");
 export const detallePromocionService = crud("/detalles-promocion");
-export const comprobanteService = crud("/comprobantes");
+export const comprobanteService = {
+  ...crud("/comprobantes"),
+  porVenta: (idVenta) => apiRequest(`/comprobantes/venta/${idVenta}`),
+};
 export const deliveryService = crud("/deliveries");
 
 export const prediccionService = {

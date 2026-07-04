@@ -39,17 +39,26 @@ export default function EmitirComprobante({
   const emitir = async (accion) => {
     if (!pedidoSeleccionado) return;
     try {
-      const comprobante = await comprobanteService.crear({
-        tipoComprobante,
-        numeroComprobante: `${tipoComprobante === "Boleta" ? "B001" : "F001"}-${Date.now()}`,
-        total,
-        rucCliente: tipoComprobante === "Factura" ? ruc : null,
-        razonSocial: tipoComprobante === "Factura" ? razonSocial : (nombreCliente || pedidoSeleccionado.cliente),
-        direccionFiscal: tipoComprobante === "Factura" ? direccion : direccionPedido,
-        idVenta: Number(pedidoSeleccionado.id),
-      });
-      setPedidos((prev) => prev.map((pedido) => String(pedido.id) === String(pedidoSeleccionado.id) ? { ...pedido, comprobante: comprobante.tipoComprobante } : pedido));
-      mostrarNotificacion(`Comprobante ${accion}`);
+      let comprobante;
+      try {
+        comprobante = await comprobanteService.porVenta(Number(pedidoSeleccionado.id));
+      } catch {
+        comprobante = await comprobanteService.crear({
+          tipoComprobante,
+          numeroComprobante: `${tipoComprobante === "Boleta" ? "B001" : "F001"}-${Date.now()}`,
+          total,
+          rucCliente: tipoComprobante === "Factura" ? ruc : null,
+          razonSocial: tipoComprobante === "Factura" ? razonSocial : (nombreCliente || pedidoSeleccionado.cliente),
+          direccionFiscal: tipoComprobante === "Factura" ? direccion : direccionPedido,
+          idVenta: Number(pedidoSeleccionado.id),
+        });
+      }
+      setTipoComprobante(comprobante.tipoComprobante);
+      setPedidos((prev) => prev.map((pedido) => String(pedido.id) === String(pedidoSeleccionado.id)
+        ? { ...pedido, comprobante: comprobante.tipoComprobante, comprobanteData: comprobante }
+        : pedido));
+      mostrarNotificacion(accion === "impreso" ? "Comprobante listo para imprimir" : "Seleccione Guardar como PDF");
+      setTimeout(() => window.print(), 100);
     } catch (error) { mostrarNotificacion(error); }
   };
 
@@ -156,7 +165,7 @@ export default function EmitirComprobante({
           </div>
 
           <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: 12 }}>
-            Nº: 001-00123<br />
+            Nº: {pedidoSeleccionado?.comprobanteData?.numeroComprobante || "Pendiente"}<br />
             Fecha: {new Date().toLocaleDateString("es-PE")}
           </div>
 
