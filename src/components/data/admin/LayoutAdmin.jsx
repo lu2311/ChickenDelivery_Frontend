@@ -25,6 +25,7 @@ export default function LayoutAdmin({
   usuarios,
   setUsuarios,
   promociones,
+  categorias,
   setPromociones,
   mostrarNotificacion
 }) {
@@ -98,6 +99,7 @@ export default function LayoutAdmin({
             productos={productos}
             setProductos={setProductos}
             mostrarNotificacion={mostrarNotificacion}
+            categorias={categorias}
           />
         )}
 

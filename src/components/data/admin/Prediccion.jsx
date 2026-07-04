@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import carrito_compras from "../icons/carrito-compras.png";
+import { prediccionService } from "../../../services/resourceServices";
 
 export default function Prediccion() {
   const [resultado, setResultado] = useState(null);
@@ -9,7 +10,7 @@ export default function Prediccion() {
   const alturas = [45, 35, 62, 55, 75, 80, 45, 70, 68, 50, 40, 65];
   const maxAltura = Math.max(...alturas);
 
-  const obtenerDatosManana = () => {
+  const obtenerDatosManana = useCallback(() => {
     const manana = new Date();
     manana.setDate(manana.getDate() + 1);
 
@@ -22,26 +23,14 @@ export default function Prediccion() {
       dia: manana.getDate(),
       es_feriado: 0,
     };
-  };
+  }, []);
 
-  const obtenerPrediccion = async () => {
+  const obtenerPrediccion = useCallback(async () => {
     try {
       setCargando(true);
       setError("");
 
-      const response = await fetch("http://localhost:8080/api/prediccion", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(obtenerDatosManana()),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al obtener la predicción");
-      }
-
-      const data = await response.json();
+      const data = await prediccionService.obtener(obtenerDatosManana());
       setResultado(data);
     } catch (error) {
       console.error(error);
@@ -49,11 +38,11 @@ export default function Prediccion() {
     } finally {
       setCargando(false);
     }
-  };
+  }, [obtenerDatosManana]);
 
   useEffect(() => {
     obtenerPrediccion();
-  }, []);
+  }, [obtenerPrediccion]);
 
   return (
     <div>

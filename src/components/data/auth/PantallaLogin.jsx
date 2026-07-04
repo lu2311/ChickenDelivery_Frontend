@@ -13,6 +13,7 @@ export default function PantallaLogin({ onLogin }) {
       localStorage.setItem("token", data.token);
       localStorage.setItem("usuario", JSON.stringify(data));
       onLogin({
+        id: data.id,
         nombre: data.nombre,
         rol: data.rol === "Administrador" ? "admin" : "empleado",
       });
