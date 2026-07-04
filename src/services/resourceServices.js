@@ -26,4 +26,6 @@ export const deliveryService = crud("/deliveries");
 
 export const prediccionService = {
   obtener: (data) => apiRequest("/prediccion", { method: "POST", body: JSON.stringify(data) }),
+  estado: () => apiRequest("/prediccion/estado"),
+  entrenar: () => apiRequest("/prediccion/entrenar", { method: "POST" }),
 };

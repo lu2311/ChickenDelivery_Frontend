@@ -542,6 +542,37 @@ body {
   background: #c0392b;
 }
 
+.prediction-error { background: #fdecea; color: #b3261e; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; font-weight: 700; }
+.prediction-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 20px; }
+.prediction-card { padding: 20px; }
+.prediction-card h3 { margin: 0 0 16px; font-size: 1.05rem; }
+.prediction-card-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.training-status { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .8rem; text-transform: capitalize; background: #eee; }
+.training-entrenando { background: #fff3cd; color: #7a5b00; }
+.training-completado, .training-listo { background: #e6f6ec; color: #18723b; }
+.training-error, .training-sin-conexion { background: #fdecea; color: #b3261e; }
+.training-stage { color: #666; margin: 18px 0 8px; }
+.training-progress { height: 12px; background: #eee; border-radius: 999px; overflow: hidden; }
+.training-progress > div { height: 100%; background: #c0392b; transition: width .35s ease; }
+.training-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.training-info { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 10px 12px; }
+.training-info span { display: block; color: #777; font-size: .78rem; margin-bottom: 4px; }
+.training-info strong { font-size: .92rem; overflow-wrap: anywhere; }
+.prediction-help { color: #777; font-size: .85rem; line-height: 1.5; }
+.interactive-hour-chart { display: flex; align-items: flex-end; gap: 8px; height: 205px; border-bottom: 1px solid #ddd; padding: 12px 0 0; }
+.hour-column { flex: 1; height: 100%; min-width: 32px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; border: 0; background: transparent; cursor: pointer; padding: 0; }
+.hour-bar { display: block; width: min(42px, 80%); background: #f1c40f; border-radius: 5px 5px 0 0; transition: height .3s ease, background .2s, transform .2s; }
+.hour-column:hover .hour-bar, .hour-column.selected .hour-bar { background: #c0392b; transform: scaleX(1.08); }
+.hour-value { opacity: 0; font-size: .75rem; font-weight: 800; margin-bottom: 4px; }
+.hour-column:hover .hour-value, .hour-column.selected .hour-value { opacity: 1; }
+.hour-label { color: #777; font-size: .78rem; padding: 7px 0; }
+.chart-selection { margin-top: 12px; color: #555; font-weight: 700; }
+
+@media (max-width: 900px) {
+  .prediction-grid { grid-template-columns: 1fr; }
+  .training-meta { grid-template-columns: 1fr; }
+}
+
 @media print {
   body * {
     visibility: hidden;
