@@ -46,6 +46,7 @@ export default function HistorialPedidos({ navegar, pedidos }) {
               <th>Nº Pedido</th>
               <th>Fecha</th>
               <th>Cliente</th>
+              <th>Dirección</th>
               <th>Total</th>
               <th>Comprobante</th>
             </tr>
@@ -57,6 +58,7 @@ export default function HistorialPedidos({ navegar, pedidos }) {
                 <td style={{ fontWeight: 700, fontSize: "0.95rem" }}>{p.id}</td>
                 <td style={{ fontSize: "0.95rem" }}>{p.fecha}</td>
                 <td style={{ fontSize: "0.95rem" }}>{p.cliente}</td>
+                <td style={{ fontSize: "0.95rem" }}>{p.delivery?.direccionEntrega || p.direccionCliente || "No registrada"}</td>
                 <td style={{ fontSize: "0.95rem" }}>S/ {p.total.toFixed(2)}</td>
                 <td>
                   <span className={p.comprobante === "Boleta" ? "badge-boleta" : "badge-factura"} style={{ fontSize: "0.9rem", padding: "4px 8px" }}>

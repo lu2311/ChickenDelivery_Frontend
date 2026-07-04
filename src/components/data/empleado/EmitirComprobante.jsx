@@ -11,13 +11,21 @@ export default function EmitirComprobante({
   mostrarNotificacion,
 }) {
   const [tipoComprobante, setTipoComprobante] = useState("Boleta");
-  const [nombreCliente, setNombreCliente] = useState("");
+  const [nombreCliente, setNombreCliente] = useState(pedidos[0]?.cliente || "");
   const [razonSocial, setRazonSocial] = useState("");
   const [ruc, setRuc] = useState("");
-  const [direccion, setDireccion] = useState("");
+  const [direccion, setDireccion] = useState(pedidos[0]?.delivery?.direccionEntrega || pedidos[0]?.direccionCliente || "");
 
   const [pedidoId, setPedidoId] = useState(pedidos[0]?.id || "");
   const pedidoSeleccionado = pedidos.find((pedido) => String(pedido.id) === String(pedidoId)) || null;
+  const direccionPedido = pedidoSeleccionado?.delivery?.direccionEntrega || pedidoSeleccionado?.direccionCliente || "No registrada";
+
+  const seleccionarPedido = (id) => {
+    setPedidoId(id);
+    const pedido = pedidos.find((item) => String(item.id) === String(id));
+    setNombreCliente(pedido?.cliente || "");
+    setDireccion(pedido?.delivery?.direccionEntrega || pedido?.direccionCliente || "");
+  };
 
   const totalItems = pedidoSeleccionado?.detalles?.map((detalle) => ({
     descripcion: `${detalle.cantidad} x ${detalle.nombreProducto}`,
@@ -36,8 +44,8 @@ export default function EmitirComprobante({
         numeroComprobante: `${tipoComprobante === "Boleta" ? "B001" : "F001"}-${Date.now()}`,
         total,
         rucCliente: tipoComprobante === "Factura" ? ruc : null,
-        razonSocial: tipoComprobante === "Factura" ? razonSocial : nombreCliente,
-        direccionFiscal: tipoComprobante === "Factura" ? direccion : null,
+        razonSocial: tipoComprobante === "Factura" ? razonSocial : (nombreCliente || pedidoSeleccionado.cliente),
+        direccionFiscal: tipoComprobante === "Factura" ? direccion : direccionPedido,
         idVenta: Number(pedidoSeleccionado.id),
       });
       setPedidos((prev) => prev.map((pedido) => String(pedido.id) === String(pedidoSeleccionado.id) ? { ...pedido, comprobante: comprobante.tipoComprobante } : pedido));
@@ -60,7 +68,7 @@ export default function EmitirComprobante({
       <div className="contenedor-comprobante">
 
         <div className="form-comprobante" style={{ minWidth: 260 }}>
-          <select className="campo-texto" style={{ marginBottom: 18 }} value={pedidoId} onChange={(e) => setPedidoId(e.target.value)}>
+          <select className="campo-texto" style={{ marginBottom: 18 }} value={pedidoId} onChange={(e) => seleccionarPedido(e.target.value)}>
             {pedidos.map((pedido) => <option key={pedido.id} value={pedido.id}>Pedido #{pedido.id} - {pedido.cliente}</option>)}
           </select>
           <div style={{ marginBottom: 16 }}>
@@ -154,7 +162,10 @@ export default function EmitirComprobante({
 
           <div style={{ fontSize: "0.95rem", marginBottom: 12 }}>
             {tipoComprobante === "Boleta" ? (
-              <div>Cliente: {nombreCliente || "-"}</div>
+              <div>
+                Cliente: {nombreCliente || pedidoSeleccionado?.cliente || "-"}<br />
+                Dirección: {direccionPedido}
+              </div>
             ) : (
               <div style={{ fontSize: "0.95rem", marginBottom: 12 }}>
                 Razón Social: {razonSocial || "-"}<br />

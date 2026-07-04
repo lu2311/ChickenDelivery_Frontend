@@ -124,14 +124,16 @@ export default function NuevoPedido({
         precioUnitario: item.precio,
         subtotal: item.precio * item.cantidad,
       })));
-      if (tipoEntrega === "Delivery") {
-        await deliveryService.crear({ idVenta: venta.id, estadoDelivery: "Pendiente", costoDelivery, direccionEntrega });
-      }
+      const delivery = tipoEntrega === "Delivery"
+        ? await deliveryService.crear({ idVenta: venta.id, estadoDelivery: "Pendiente", costoDelivery, direccionEntrega })
+        : null;
       const nuevoPedido = {
         ...venta,
         id: String(venta.id),
         fecha: new Date(venta.fechaVenta).toLocaleString("es-PE"),
         cliente: clienteSeleccionado?.nombre || "Venta anónima",
+        direccionCliente: clienteSeleccionado?.direccion || null,
+        delivery,
         total: Number(venta.total),
         comprobante: "Pendiente",
       };
