@@ -3,6 +3,7 @@ import flecha_izq from '../icons/flecha-izquierda.png';
 import impresora from '../icons/impresora.png';
 import descargas from '../icons/descargas.png';
 import { comprobanteService } from "../../../services/resourceServices";
+import { jsPDF } from "jspdf";
 
 export default function EmitirComprobante({
   navegar,
@@ -36,6 +37,62 @@ export default function EmitirComprobante({
   const subtotal = total / 1.18;
 
   const igv = subtotal * 0.18;
+
+  const descargarPdf = (comprobante) => {
+    const alto = Math.max(160, 115 + totalItems.length * 12);
+    const pdf = new jsPDF({ unit: "mm", format: [80, alto] });
+    let y = 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.text("IKAGI DELI EXPRESS EIRL", 40, y, { align: "center" });
+    y += 7;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text(["RUC: 20123456789", "Av. Principal 123, Lima", "Tel: (01) 123-4567"], 40, y, { align: "center" });
+    y += 15;
+    pdf.line(6, y, 74, y);
+    y += 7;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.text(comprobante.tipoComprobante.toUpperCase(), 6, y);
+    y += 6;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text(`Nro: ${comprobante.numeroComprobante}`, 6, y);
+    y += 5;
+    pdf.text(`Fecha: ${new Date(comprobante.fechaEmision).toLocaleDateString("es-PE")}`, 6, y);
+    y += 6;
+    pdf.text(`Cliente: ${nombreCliente || pedidoSeleccionado?.cliente || "Venta anonima"}`, 6, y);
+    y += 5;
+    const lineasDireccion = pdf.splitTextToSize(`Direccion: ${direccionPedido}`, 68);
+    pdf.text(lineasDireccion, 6, y);
+    y += lineasDireccion.length * 4 + 4;
+    pdf.line(6, y, 74, y);
+    y += 6;
+
+    totalItems.forEach((item) => {
+      const descripcion = pdf.splitTextToSize(item.descripcion, 48);
+      pdf.text(descripcion, 6, y);
+      pdf.text(`S/ ${item.monto.toFixed(2)}`, 74, y, { align: "right" });
+      y += Math.max(6, descripcion.length * 4 + 2);
+    });
+
+    pdf.line(6, y, 74, y);
+    y += 6;
+    pdf.text("Subtotal:", 45, y);
+    pdf.text(`S/ ${subtotal.toFixed(2)}`, 74, y, { align: "right" });
+    y += 5;
+    pdf.text("IGV (18%):", 45, y);
+    pdf.text(`S/ ${igv.toFixed(2)}`, 74, y, { align: "right" });
+    y += 6;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.text("TOTAL:", 45, y);
+    pdf.text(`S/ ${total.toFixed(2)}`, 74, y, { align: "right" });
+    pdf.save(`comprobante-${comprobante.numeroComprobante}.pdf`);
+  };
+
   const emitir = async (accion) => {
     if (!pedidoSeleccionado) return;
     try {
@@ -57,8 +114,13 @@ export default function EmitirComprobante({
       setPedidos((prev) => prev.map((pedido) => String(pedido.id) === String(pedidoSeleccionado.id)
         ? { ...pedido, comprobante: comprobante.tipoComprobante, comprobanteData: comprobante }
         : pedido));
-      mostrarNotificacion(accion === "impreso" ? "Comprobante listo para imprimir" : "Seleccione Guardar como PDF");
-      setTimeout(() => window.print(), 100);
+      if (accion === "impreso") {
+        mostrarNotificacion("Comprobante listo para imprimir");
+        setTimeout(() => window.print(), 100);
+      } else {
+        descargarPdf(comprobante);
+        mostrarNotificacion("PDF descargado correctamente");
+      }
     } catch (error) { mostrarNotificacion(error); }
   };
 
