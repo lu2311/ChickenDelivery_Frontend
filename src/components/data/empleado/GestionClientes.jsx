@@ -3,6 +3,7 @@ import lupa from '../icons/lupa.png';
 import flecha_izq from '../icons/flecha-izquierda.png';
 import lapiz from '../icons/lapiz.png';
 import basura from '../icons/basura.png';
+import { clienteService } from "../../../services/resourceServices";
 
 export default function GestionClientes({
   navegar,
@@ -56,7 +57,7 @@ export default function GestionClientes({
   };
 
 
-const guardar = () => {
+const guardar = async () => {
   if (!form.nombre) return;
 
   if (form.dni && !/^\d{8}$/.test(form.dni)) {
@@ -64,32 +65,23 @@ const guardar = () => {
     return;
   }
 
-  if (clienteEdicion) {
-    setClientes((prev) =>
-      prev.map((c) =>
-        c.id === clienteEdicion.id
-          ? { ...c, ...form }
-          : c
-      )
-    );
-
-    mostrarNotificacion("Cliente actualizado");
-  } else {
-    setClientes((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        ...form
-      }
-    ]);
-
-    mostrarNotificacion("Cliente registrado");
-  }
-
-  setModalAbierto(false);
+  try {
+    const guardado = clienteEdicion
+      ? await clienteService.actualizar(clienteEdicion.id, { ...clienteEdicion, ...form })
+      : await clienteService.crear(form);
+    if (clienteEdicion) {
+      setClientes((prev) => prev.map((c) => c.id === clienteEdicion.id ? guardado : c));
+      mostrarNotificacion("Cliente actualizado");
+    } else {
+      setClientes((prev) => [...prev, guardado]);
+      mostrarNotificacion("Cliente registrado");
+    }
+    setModalAbierto(false);
+  } catch (error) { mostrarNotificacion(error); }
 };
 
-  const eliminar = (id) => {
+  const eliminar = async (id) => {
+    await clienteService.eliminar(id);
     setClientes((prev) =>
       prev.filter((c) => c.id !== id)
     );
@@ -136,7 +128,7 @@ const guardar = () => {
             <th>DNI</th>
             <th>Teléfono</th>
             <th>Dirección</th>
-            {/*<th>Acciones</th>*/}
+            <th>Acciones</th>
           </tr>
         </thead>
 
@@ -148,7 +140,7 @@ const guardar = () => {
               <td style={{ fontSize: "0.95rem" }}>{c.telefono}</td>
               <td style={{ fontSize: "0.95rem" }}>{c.direccion}</td>
 
-              {/*<td>
+              <td>
                 <button className="btn-accion editar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => abrirEdicion(c)}>
                   <img src={lapiz} alt="Editar" style={{ width: '25px', height: '25px' }} />
                 </button>
@@ -156,7 +148,7 @@ const guardar = () => {
                 <button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(c.id)}>
                   <img src={basura} alt="Basura" style={{ width: '25px', height: '25px' }} />
                 </button>
-              </td>*/}
+              </td>
             </tr>
           ))}
         </tbody>
