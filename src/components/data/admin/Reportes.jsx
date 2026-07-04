@@ -5,21 +5,23 @@ export default function Reportes({ pedidos, productos }) {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
 
-  const ventasTotal = pedidos.reduce((s, p) => s + p.total, 0);
+  const pedidosFiltrados = pedidos.filter((pedido) => {
+    const fecha = pedido.fechaVenta ? new Date(pedido.fechaVenta) : null;
+    if (!fecha || Number.isNaN(fecha.getTime())) return !fechaInicio && !fechaFin;
+    if (fechaInicio && fecha < new Date(`${fechaInicio}T00:00:00`)) return false;
+    if (fechaFin && fecha > new Date(`${fechaFin}T23:59:59`)) return false;
+    return true;
+  });
+  const ventasTotal = pedidosFiltrados.reduce((s, p) => s + p.total, 0);
   const productosActivos = productos.filter((p) => p.estado).length;
 
-  const masVendidos = [
-    {
-      producto: "Pollo a la Brasa 1/4",
-      cantidad: 2,
-      totalGenerado: 36.0,
-    },
-    {
-      producto: "Combo Familiar",
-      cantidad: 1,
-      totalGenerado: 75.0,
-    },
-  ];
+  const masVendidos = Object.values(pedidosFiltrados.flatMap((pedido) => pedido.detalles || []).reduce((acumulado, detalle) => {
+    const clave = detalle.idProducto;
+    acumulado[clave] ||= { producto: detalle.nombreProducto, cantidad: 0, totalGenerado: 0 };
+    acumulado[clave].cantidad += detalle.cantidad;
+    acumulado[clave].totalGenerado += Number(detalle.subtotal);
+    return acumulado;
+  }, {})).sort((a, b) => b.cantidad - a.cantidad);
 
   const datosGrafico = [116.5, 80, 95, 110, 116.5, 90, 0];
   const maxGrafico = Math.max(...datosGrafico);
@@ -40,8 +42,8 @@ export default function Reportes({ pedidos, productos }) {
       </div>
 
       <div style={{ display: "flex", gap: 12 }}>
-        <input className="campo-texto" style={{ width: 180, padding: "12px", fontSize: "1rem" }} placeholder="Fecha Inicio" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
-        <input className="campo-texto" style={{ width: 180, padding: "12px", fontSize: "1rem" }} placeholder="Fecha Fin" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+        <input className="campo-texto" type="date" style={{ width: 180, padding: "12px", fontSize: "1rem" }} value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+        <input className="campo-texto" type="date" style={{ width: 180, padding: "12px", fontSize: "1rem" }} value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
       </div>
     </div>
 
@@ -54,7 +56,7 @@ export default function Reportes({ pedidos, productos }) {
 
       <div className="tarjeta-stat">
         <div className="etiqueta">Pedidos Registrados</div>
-        <div className="valor">{pedidos.length}</div>
+        <div className="valor">{pedidosFiltrados.length}</div>
       </div>
 
       <div className="tarjeta-stat">
