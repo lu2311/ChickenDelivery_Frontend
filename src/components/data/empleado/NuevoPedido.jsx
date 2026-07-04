@@ -1,18 +1,22 @@
 import { useState } from "react";
 import lupa from '../icons/lupa.png';
 import flecha_izq from '../icons/flecha-izquierda.png';
+import { clienteService, deliveryService, detalleVentaService, ventaService } from "../../../services/resourceServices";
 
 export default function NuevoPedido({
   navegar,
   clientes,
+  setClientes,
   productos,
   pedidos,
   setPedidos,
-  mostrarNotificacion
+  mostrarNotificacion,
+  usuario,
 }) {
   const [nombre, setNombre] = useState("");
   const [dniTelefono, setDniTelefono] = useState("");
   const [metodoPago, setMetodoPago] = useState("Efectivo");
+  const [tipoEntrega, setTipoEntrega] = useState("Recojo");
   const [categoriaActiva, setCategoriaActiva] = useState("TODOS");
   const [busqueda, setBusqueda] = useState("");
   const [itemsPedido, setItemsPedido] = useState([]);
@@ -66,27 +70,45 @@ export default function NuevoPedido({
     0
   );
 
-  const registrarPedido = () => {
+  const registrarPedido = async () => {
     if (!nombre || itemsPedido.length === 0) return;
 
-    const nuevoPedido = {
-      id: String(pedidos.length + 1).padStart(3, "0"),
-      fecha:
-        new Date().toLocaleDateString("es-PE") +
-        " " +
-        new Date().toLocaleTimeString("es-PE", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      cliente: nombre,
-      total,
-      comprobante: "Boleta",
-    };
-
-    setPedidos((prev) => [...prev, nuevoPedido]);
-
-    mostrarNotificacion("Pedido registrado correctamente");
-    navegar("empleado-home");
+    try {
+      let cliente = clientes.find((c) => c.dni === dniTelefono || c.telefono === dniTelefono);
+      if (!cliente) {
+        cliente = await clienteService.crear({ nombre, dni: /^\d{8}$/.test(dniTelefono) ? dniTelefono : null, telefono: /^\d{9}$/.test(dniTelefono) ? dniTelefono : null });
+        setClientes((prev) => [...prev, cliente]);
+      }
+      const venta = await ventaService.crear({
+        tipoEntrega,
+        metodoPago,
+        canalVenta: "Presencial",
+        total,
+        idUsuario: usuario.id,
+        idCliente: cliente.id,
+      });
+      await Promise.all(itemsPedido.map((item) => detalleVentaService.crear({
+        idVenta: venta.id,
+        idProducto: item.id,
+        cantidad: item.cantidad,
+        precioUnitario: item.precio,
+        subtotal: item.precio * item.cantidad,
+      })));
+      if (tipoEntrega === "Delivery") {
+        await deliveryService.crear({ idVenta: venta.id, estadoDelivery: "Pendiente", costoDelivery: 0 });
+      }
+      const nuevoPedido = {
+        ...venta,
+        id: String(venta.id),
+        fecha: new Date(venta.fechaVenta).toLocaleString("es-PE"),
+        cliente: cliente.nombre,
+        total: Number(venta.total),
+        comprobante: "Pendiente",
+      };
+      setPedidos((prev) => [...prev, nuevoPedido]);
+      mostrarNotificacion("Pedido registrado correctamente");
+      navegar("empleado-home");
+    } catch (error) { mostrarNotificacion(error); }
   };
 
   return (
@@ -119,6 +141,11 @@ export default function NuevoPedido({
                 <option>Efectivo</option>
                 <option>Yape</option>
                 <option>Tarjeta</option>
+              </select>
+
+              <select className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={tipoEntrega} onChange={(e) => setTipoEntrega(e.target.value)}>
+                <option>Recojo</option>
+                <option>Delivery</option>
               </select>
             </div>
           </div>

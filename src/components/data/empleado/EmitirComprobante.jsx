@@ -2,10 +2,12 @@ import { useState } from "react";
 import flecha_izq from '../icons/flecha-izquierda.png';
 import impresora from '../icons/impresora.png';
 import descargas from '../icons/descargas.png';
+import { comprobanteService } from "../../../services/resourceServices";
 
 export default function EmitirComprobante({
   navegar,
   pedidos,
+  setPedidos,
   mostrarNotificacion,
 }) {
   const [tipoComprobante, setTipoComprobante] = useState("Boleta");
@@ -14,30 +16,34 @@ export default function EmitirComprobante({
   const [ruc, setRuc] = useState("");
   const [direccion, setDireccion] = useState("");
 
-  const [pedidoSeleccionado] = useState(
-    pedidos[0] || null
-  );
+  const [pedidoId, setPedidoId] = useState(pedidos[0]?.id || "");
+  const pedidoSeleccionado = pedidos.find((pedido) => String(pedido.id) === String(pedidoId)) || null;
 
-  const totalItems = pedidoSeleccionado
-    ? [
-      {
-        descripcion: "2 x Pollo a la Brasa 1/4",
-        monto: 36.0,
-      },
-      {
-        descripcion: "1 x Inca Kola 1.5 L",
-        monto: 5.5,
-      },
-    ]
-    : [];
+  const totalItems = pedidoSeleccionado?.detalles?.map((detalle) => ({
+    descripcion: `${detalle.cantidad} x ${detalle.nombreProducto}`,
+    monto: Number(detalle.subtotal),
+  })) || [];
 
-  const subtotal = totalItems.reduce(
-    (s, i) => s + i.monto,
-    0
-  );
+  const total = Number(pedidoSeleccionado?.total || 0);
+  const subtotal = total / 1.18;
 
   const igv = subtotal * 0.18;
-  const total = subtotal + igv;
+  const emitir = async (accion) => {
+    if (!pedidoSeleccionado) return;
+    try {
+      const comprobante = await comprobanteService.crear({
+        tipoComprobante,
+        numeroComprobante: `${tipoComprobante === "Boleta" ? "B001" : "F001"}-${Date.now()}`,
+        total,
+        rucCliente: tipoComprobante === "Factura" ? ruc : null,
+        razonSocial: tipoComprobante === "Factura" ? razonSocial : nombreCliente,
+        direccionFiscal: tipoComprobante === "Factura" ? direccion : null,
+        idVenta: Number(pedidoSeleccionado.id),
+      });
+      setPedidos((prev) => prev.map((pedido) => String(pedido.id) === String(pedidoSeleccionado.id) ? { ...pedido, comprobante: comprobante.tipoComprobante } : pedido));
+      mostrarNotificacion(`Comprobante ${accion}`);
+    } catch (error) { mostrarNotificacion(error); }
+  };
 
   return (
     <div>
@@ -54,6 +60,9 @@ export default function EmitirComprobante({
       <div className="contenedor-comprobante">
 
         <div className="form-comprobante" style={{ minWidth: 260 }}>
+          <select className="campo-texto" style={{ marginBottom: 18 }} value={pedidoId} onChange={(e) => setPedidoId(e.target.value)}>
+            {pedidos.map((pedido) => <option key={pedido.id} value={pedido.id}>Pedido #{pedido.id} - {pedido.cliente}</option>)}
+          </select>
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 12, color: "#555" }}>
               Tipo de Comprobante
@@ -106,14 +115,14 @@ export default function EmitirComprobante({
 
           <div style={{ display: "flex", gap: 10 }}>
             <button className="btn-secundario" style={{ padding: "10px 14px", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}
-              onClick={() => mostrarNotificacion("Comprobante impreso")}
+              onClick={() => emitir("impreso")}
             >
               <img src={impresora} alt="Impresora" style={{ width: 25, height: 25 }} />
               IMPRIMIR
             </button>
 
             <button className="btn-primario" style={{ padding: "10px 14px", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}
-              onClick={() => mostrarNotificacion("PDF descargado")}
+              onClick={() => emitir("generado")}
             >
               <img src={descargas} alt="Descarga" style={{ width: 25, height: 25 }} />
               DESCARGAR PDF
