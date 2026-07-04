@@ -21,8 +21,10 @@ export default function App() {
   const [promociones, setPromociones] = useState([]);
   const [categorias, setCategorias] = useState([]);
 
-  const mostrarNotificacion = (msg) => {
-    setNotificacion(msg);
+  const mostrarNotificacion = (msg, tipo) => {
+    const mensaje = String(msg || "Ocurrió un error");
+    const esError = tipo === "error" || /error|no se|violación|obligatori|incorrect|existe|inválid/i.test(mensaje);
+    setNotificacion({ mensaje, tipo: esError ? "error" : "exito" });
     setTimeout(() => setNotificacion(null), 2500);
   };
 
@@ -77,7 +79,7 @@ const manejarSalir = () => {
 
   return (
     <>
-      {notificacion && <Notificacion mensaje={notificacion} />}
+      {notificacion && <Notificacion mensaje={notificacion.mensaje} tipo={notificacion.tipo} />}
 
       {!sesionActiva && <PantallaLogin onLogin={manejarLogin} />}
 

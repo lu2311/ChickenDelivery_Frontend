@@ -538,6 +538,10 @@ body {
   animation: entradaNotif 0.3s ease;
 }
 
+.notificacion-error {
+  background: #c0392b;
+}
+
 @keyframes entradaNotif {
   from {
     transform: translateY(20px);
