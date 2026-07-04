@@ -175,7 +175,7 @@ export default function NuevoPedido({
                 <input className="campo-texto" style={{ flex: "1 1 100%", padding: "12px", fontSize: "1rem" }} value={clienteSeleccionado.direccion || "Sin dirección registrada"} readOnly />
               )}
 
-              {dni.length === 8 && !clienteSeleccionado && !ventaAnonima && (
+              {!ventaAnonima && (
                 <button type="button" className="btn-secundario" style={{ padding: "12px 16px" }} onClick={activarVentaAnonima}>
                   VENTA ANÓNIMA
                 </button>
