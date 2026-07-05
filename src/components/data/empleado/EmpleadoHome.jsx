@@ -1,11 +1,13 @@
 import usuarios from '../icons/usuarios.png';
 import historial from '../icons/historial.png';
 import comprobante from '../icons/comprobante.png';
+import VentaChat from './VentaChat';
 
-export default function EmpleadoHome({ navegar, pedidos, usuario }) {
+export default function EmpleadoHome({ navegar, pedidos, usuario, clientes, productos, setPedidos, mostrarNotificacion }) {
   const ventasHoy = pedidos.reduce((s, p) => s + p.total, 0);
   return (
-    <div>
+    <div className="employee-home-grid">
+      <div className="employee-home-main">
       <h5 style={{ fontWeight: 800, marginBottom: 18, fontSize: "1.8rem" }}> Bienvenido, {usuario?.nombre}</h5>
 
       <button className="btn-primario" style={{ marginBottom: 24, padding: "14px", fontSize: "1rem" }} onClick={() => navegar("nuevo-pedido")}>
@@ -31,6 +33,9 @@ export default function EmpleadoHome({ navegar, pedidos, usuario }) {
         <button className="btn-acceso-rapido" style={{ padding: "12px 14px", fontSize: "1.2rem" }} onClick={() => navegar("historial")}><span className="icono" style={{ fontSize: "1.1rem" }}><img src={historial} alt="Historial" style={{ width: '60px', height: '60px'}}/></span>Historial</button>
         <button className="btn-acceso-rapido" style={{ padding: "12px 14px", fontSize: "1.2rem" }} onClick={() => navegar("emitir-comprobante")}><span className="icono" style={{ fontSize: "1.1rem" }}><img src={comprobante} alt="Historial" style={{ width: '60px', height: '60px'}}/></span>Emitir Comprobante</button>
       </div>
+      </div>
+
+      <VentaChat clientes={clientes} productos={productos} usuario={usuario} setPedidos={setPedidos} mostrarNotificacion={mostrarNotificacion} />
     </div>
   );
 }
