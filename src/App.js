@@ -1,12 +1,12 @@
 import { useState } from "react";
 import "./App.css";
 
-import { productosIniciales, clientesIniciales, pedidosIniciales, usuariosIniciales, promocionesIniciales } from "./components/data/iniciales";
-
 import PantallaLogin from "./components/data/auth/PantallaLogin";
 import LayoutEmpleado from "./components/data/empleado/LayoutEmpleado";
 import LayoutAdmin from "./components/data/admin/LayoutAdmin";
 import Notificacion from "./components/data/common/Notificacion";
+import { productoService } from "./services/productoService";
+import { categoriaService, clienteService, promocionService, usuarioService, ventaService } from "./services/resourceServices";
 
 export default function App() {
   const [sesionActiva, setSesionActiva] = useState(false);
@@ -14,22 +14,52 @@ export default function App() {
   const [pantallaActual, setPantallaActual] = useState("login");
   const [notificacion, setNotificacion] = useState(null);
   const [usuarioActual, setUsuarioActual] = useState(null);
-  const [productos, setProductos] = useState(productosIniciales);
-  const [clientes, setClientes] = useState(clientesIniciales);
-  const [pedidos, setPedidos] = useState(pedidosIniciales);
-  const [usuarios, setUsuarios] = useState(usuariosIniciales);
-  const [promociones, setPromociones] = useState(promocionesIniciales);
+  const [productos, setProductos] = useState([]);
+  const [clientes, setClientes] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+  const [promociones, setPromociones] = useState([]);
+  const [categorias, setCategorias] = useState([]);
 
-  const mostrarNotificacion = (msg) => {
-    setNotificacion(msg);
+  const mostrarNotificacion = (msg, tipo) => {
+    const mensaje = String(msg || "Ocurrió un error");
+    const esError = tipo === "error" || /error|no se|violación|obligatori|incorrect|existe|inválid/i.test(mensaje);
+    setNotificacion({ mensaje, tipo: esError ? "error" : "exito" });
     setTimeout(() => setNotificacion(null), 2500);
   };
 
-  const manejarLogin = (usuario) => {
+  const manejarLogin = async (usuario) => {
     setUsuarioActual(usuario);
     setRolUsuario(usuario.rol);
 
     setSesionActiva(true);
+
+    try {
+      const [productosApi, clientesApi, ventasApi, usuariosApi, promocionesApi, categoriasApi] = await Promise.all([
+        productoService.listar(),
+        clienteService.listar(),
+        ventaService.listar(),
+        usuarioService.listar(),
+        promocionService.listar(),
+        categoriaService.listar(),
+      ]);
+      setProductos(productosApi.map((p) => ({ ...p, precio: Number(p.precio), categoria: p.nombreCategoria || "Sin categoría" })));
+      setClientes(clientesApi);
+      setPedidos(ventasApi.map((v) => ({
+        ...v,
+        id: String(v.id),
+        fecha: v.fechaVenta ? new Date(v.fechaVenta).toLocaleString("es-PE") : "",
+        cliente: v.nombreCliente || "Sin cliente",
+        total: Number(v.total),
+        comprobanteData: v.comprobante || null,
+        comprobante: v.comprobante?.tipoComprobante || "Pendiente",
+      })));
+      setUsuarios(usuariosApi);
+      setPromociones(promocionesApi.map((p) => ({ ...p, precioCombo: Number(p.precioCombo) })));
+      setCategorias(categoriasApi);
+    } catch (error) {
+      mostrarNotificacion(error || "No se pudieron cargar los datos");
+    }
 
     setPantallaActual(
       usuario.rol === "admin"
@@ -39,6 +69,8 @@ export default function App() {
   };
 
 const manejarSalir = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("usuario");
   setSesionActiva(false);
   setUsuarioActual(null);
   setPantallaActual("login");
@@ -48,7 +80,7 @@ const manejarSalir = () => {
 
   return (
     <>
-      {notificacion && <Notificacion mensaje={notificacion} />}
+      {notificacion && <Notificacion mensaje={notificacion.mensaje} tipo={notificacion.tipo} />}
 
       {!sesionActiva && <PantallaLogin onLogin={manejarLogin} />}
 
@@ -64,6 +96,7 @@ const manejarSalir = () => {
           pedidos={pedidos}
           setPedidos={setPedidos}
           productos={productos}
+          promociones={promociones}
           mostrarNotificacion={mostrarNotificacion}
         />
       )}
@@ -81,6 +114,7 @@ const manejarSalir = () => {
           usuarios={usuarios}
           setUsuarios={setUsuarios}
           promociones={promociones}
+          categorias={categorias}
           setPromociones={setPromociones}
           mostrarNotificacion={mostrarNotificacion}
         />

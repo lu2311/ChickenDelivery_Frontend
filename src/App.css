@@ -232,6 +232,9 @@ body {
   transition: border-color 0.2s;
 }
 
+.campo-error { border-color: #d7352a !important; box-shadow: 0 0 0 3px rgba(215, 53, 42, .10); }
+.panel-error { border-color: #d7352a !important; box-shadow: 0 0 0 3px rgba(215, 53, 42, .08); }
+
 .campo-texto:focus {
   border-color: #c0392b;
 }
@@ -538,6 +541,60 @@ body {
   animation: entradaNotif 0.3s ease;
 }
 
+.notificacion-error {
+  background: #c0392b;
+}
+
+.prediction-error { background: #fdecea; color: #b3261e; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; font-weight: 700; }
+.prediction-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 20px; }
+.prediction-card { padding: 20px; }
+.prediction-card h3 { margin: 0 0 16px; font-size: 1.05rem; }
+.prediction-card-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.training-status { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .8rem; text-transform: capitalize; background: #eee; }
+.training-entrenando { background: #fff3cd; color: #7a5b00; }
+.training-completado, .training-listo { background: #e6f6ec; color: #18723b; }
+.training-error, .training-sin-conexion { background: #fdecea; color: #b3261e; }
+.training-stage { color: #666; margin: 18px 0 8px; }
+.training-progress { height: 12px; background: #eee; border-radius: 999px; overflow: hidden; }
+.training-progress > div { height: 100%; background: #c0392b; transition: width .35s ease; }
+.training-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.training-info { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 10px 12px; }
+.training-info span { display: block; color: #777; font-size: .78rem; margin-bottom: 4px; }
+.training-info strong { font-size: .92rem; overflow-wrap: anywhere; }
+.prediction-help { color: #777; font-size: .85rem; line-height: 1.5; }
+.interactive-hour-chart { display: flex; align-items: flex-end; gap: 8px; height: 205px; border-bottom: 1px solid #ddd; padding: 12px 0 0; }
+.hour-column { flex: 1; height: 100%; min-width: 32px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; border: 0; background: transparent; cursor: pointer; padding: 0; }
+.hour-bar { display: block; width: min(42px, 80%); background: #f1c40f; border-radius: 5px 5px 0 0; transition: height .3s ease, background .2s, transform .2s; }
+.hour-column:hover .hour-bar, .hour-column.selected .hour-bar { background: #c0392b; transform: scaleX(1.08); }
+.hour-value { opacity: 0; font-size: .75rem; font-weight: 800; margin-bottom: 4px; }
+.hour-column:hover .hour-value, .hour-column.selected .hour-value { opacity: 1; }
+.hour-label { color: #777; font-size: .78rem; padding: 7px 0; }
+.chart-selection { margin-top: 12px; color: #555; font-weight: 700; }
+
+@media (max-width: 900px) {
+  .prediction-grid { grid-template-columns: 1fr; }
+  .training-meta { grid-template-columns: 1fr; }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .comprobante-preview,
+  .comprobante-preview * {
+    visibility: visible;
+  }
+
+  .comprobante-preview {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    border: 0;
+  }
+}
+
 @keyframes entradaNotif {
   from {
     transform: translateY(20px);
@@ -610,4 +667,91 @@ body {
 .campo-texto {
   width: 80%;
   max-width: 280px;
+}
+
+/* Asistente conversacional de ventas */
+.employee-home-grid {
+  display: grid;
+  grid-template-columns: minmax(520px, 1fr) minmax(360px, 480px);
+  gap: 42px;
+  align-items: start;
+}
+
+.employee-home-main { min-width: 0; }
+
+.sales-chat-card {
+  background: #fff;
+  border: 1px solid #e8e5e3;
+  border-radius: 20px;
+  box-shadow: 0 18px 50px rgba(62, 39, 32, .10);
+  overflow: hidden;
+  min-height: 650px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sales-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #eee9e6;
+  background: linear-gradient(135deg, #fff 20%, #fff7f4 100%);
+}
+
+.sales-chat-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #c83a2a;
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 7px 16px rgba(200, 58, 42, .25);
+}
+
+.sales-chat-header h2 { margin: 0 0 3px; font-size: 1.05rem; }
+.sales-chat-header span { color: #7b7774; font-size: .78rem; }
+.sales-chat-header span i { display: inline-block; width: 7px; height: 7px; background: #27ae60; border-radius: 50%; margin-right: 5px; }
+.sales-chat-header > button { margin-left: auto; width: 36px; height: 36px; border: 0; border-radius: 10px; background: #f4efed; color: #6e625e; cursor: pointer; font-size: 1.1rem; }
+
+.sales-chat-messages {
+  flex: 1;
+  min-height: 470px;
+  max-height: 570px;
+  overflow-y: auto;
+  padding: 20px;
+  background: #fcfbfa;
+  scrollbar-width: thin;
+  scrollbar-color: #d8cfcb transparent;
+}
+
+.sales-chat-row { display: flex; margin-bottom: 13px; }
+.sales-chat-row.user { justify-content: flex-end; }
+.sales-chat-bubble { max-width: 88%; padding: 11px 14px; border-radius: 16px 16px 16px 4px; background: #fff; border: 1px solid #ece7e4; color: #393431; font-size: .88rem; line-height: 1.45; box-shadow: 0 4px 13px rgba(55, 40, 35, .04); }
+.sales-chat-row.user .sales-chat-bubble { background: #c83a2a; color: #fff; border-color: #c83a2a; border-radius: 16px 16px 4px 16px; }
+.sales-chat-bubble > span { display: block; }
+
+.sales-chat-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.sales-chat-actions button { border: 1px solid #dfc4bd; border-radius: 999px; background: #fff8f6; color: #a92f22; padding: 7px 10px; font-size: .69rem; font-weight: 800; cursor: pointer; }
+.sales-chat-actions button:hover { background: #c83a2a; border-color: #c83a2a; color: #fff; }
+
+.sales-chat-input { display: flex; gap: 9px; padding: 14px 16px 8px; border-top: 1px solid #eee9e6; background: #fff; }
+.sales-chat-input input { min-width: 0; flex: 1; border: 1px solid #ded8d5; background: #faf9f8; border-radius: 13px; padding: 12px 14px; outline: none; font-size: .86rem; }
+.sales-chat-input input:focus { border-color: #c83a2a; box-shadow: 0 0 0 3px rgba(200, 58, 42, .09); }
+.sales-chat-input button { width: 43px; border: 0; border-radius: 13px; background: #c83a2a; color: #fff; cursor: pointer; font-size: 1rem; }
+.sales-chat-input button:disabled { background: #d8d1ce; cursor: default; }
+.sales-chat-hint { margin: 0; padding: 3px 18px 13px; color: #99918d; background: #fff; font-size: .69rem; }
+
+.sales-chat-typing { display: flex; gap: 4px; padding: 14px 16px; }
+.sales-chat-typing b { width: 6px; height: 6px; background: #a9a09c; border-radius: 50%; animation: chatPulse 1s infinite alternate; }
+.sales-chat-typing b:nth-child(2) { animation-delay: .2s; }
+.sales-chat-typing b:nth-child(3) { animation-delay: .4s; }
+
+@keyframes chatPulse { to { opacity: .25; transform: translateY(-3px); } }
+
+@media (max-width: 1100px) {
+  .employee-home-grid { grid-template-columns: 1fr; }
+  .sales-chat-card { min-height: 580px; }
 }

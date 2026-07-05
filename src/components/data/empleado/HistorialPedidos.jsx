@@ -7,10 +7,14 @@ export default function HistorialPedidos({ navegar, pedidos }) {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
 
-  const pedidosFiltrados = pedidos.filter(p =>
-    p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
-    p.id.includes(busqueda)
-  );
+  const pedidosFiltrados = pedidos.filter((p) => {
+    const coincideBusqueda = p.cliente.toLowerCase().includes(busqueda.toLowerCase()) || String(p.id).includes(busqueda);
+    const fecha = p.fechaVenta ? new Date(p.fechaVenta) : null;
+    if (!coincideBusqueda) return false;
+    if (fechaInicio && (!fecha || fecha < new Date(`${fechaInicio}T00:00:00`))) return false;
+    if (fechaFin && (!fecha || fecha > new Date(`${fechaFin}T23:59:59`))) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -30,9 +34,9 @@ export default function HistorialPedidos({ navegar, pedidos }) {
           <input style={{ fontSize: "1rem" }} placeholder="Buscar por cliente o Nº pedido..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
         </div>
 
-        <input className="campo-texto" style={{ flex: 1, minWidth: 150, padding: "12px", fontSize: "1rem" }} type="text" placeholder="Fecha Inicio" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
+        <input className="campo-texto" style={{ flex: 1, minWidth: 150, padding: "12px", fontSize: "1rem" }} type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
 
-        <input className="campo-texto" style={{ flex: 1, minWidth: 150, padding: "12px", fontSize: "1rem" }} type="text" placeholder="Fecha Fin" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+        <input className="campo-texto" style={{ flex: 1, minWidth: 150, padding: "12px", fontSize: "1rem" }} type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
       </div>
 
       <div className="panel-pedido" style={{ padding: 16 }}>
@@ -42,6 +46,7 @@ export default function HistorialPedidos({ navegar, pedidos }) {
               <th>Nº Pedido</th>
               <th>Fecha</th>
               <th>Cliente</th>
+              <th>Dirección</th>
               <th>Total</th>
               <th>Comprobante</th>
             </tr>
@@ -53,6 +58,7 @@ export default function HistorialPedidos({ navegar, pedidos }) {
                 <td style={{ fontWeight: 700, fontSize: "0.95rem" }}>{p.id}</td>
                 <td style={{ fontSize: "0.95rem" }}>{p.fecha}</td>
                 <td style={{ fontSize: "0.95rem" }}>{p.cliente}</td>
+                <td style={{ fontSize: "0.95rem" }}>{p.delivery?.direccionEntrega || p.direccionCliente || "No registrada"}</td>
                 <td style={{ fontSize: "0.95rem" }}>S/ {p.total.toFixed(2)}</td>
                 <td>
                   <span className={p.comprobante === "Boleta" ? "badge-boleta" : "badge-factura"} style={{ fontSize: "0.9rem", padding: "4px 8px" }}>

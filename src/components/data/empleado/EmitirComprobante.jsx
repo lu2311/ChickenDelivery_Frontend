@@ -2,42 +2,132 @@ import { useState } from "react";
 import flecha_izq from '../icons/flecha-izquierda.png';
 import impresora from '../icons/impresora.png';
 import descargas from '../icons/descargas.png';
+import { comprobanteService } from "../../../services/resourceServices";
+import { jsPDF } from "jspdf";
 
 export default function EmitirComprobante({
   navegar,
   pedidos,
+  setPedidos,
   mostrarNotificacion,
 }) {
   const [tipoComprobante, setTipoComprobante] = useState("Boleta");
-  const [nombreCliente, setNombreCliente] = useState("");
+  const [nombreCliente, setNombreCliente] = useState(pedidos[0]?.cliente || "");
   const [razonSocial, setRazonSocial] = useState("");
   const [ruc, setRuc] = useState("");
-  const [direccion, setDireccion] = useState("");
+  const [direccion, setDireccion] = useState(pedidos[0]?.delivery?.direccionEntrega || pedidos[0]?.direccionCliente || "");
 
-  const [pedidoSeleccionado] = useState(
-    pedidos[0] || null
-  );
+  const [pedidoId, setPedidoId] = useState(pedidos[0]?.id || "");
+  const pedidoSeleccionado = pedidos.find((pedido) => String(pedido.id) === String(pedidoId)) || null;
+  const direccionPedido = pedidoSeleccionado?.delivery?.direccionEntrega || pedidoSeleccionado?.direccionCliente || "No registrada";
 
-  const totalItems = pedidoSeleccionado
-    ? [
-      {
-        descripcion: "2 x Pollo a la Brasa 1/4",
-        monto: 36.0,
-      },
-      {
-        descripcion: "1 x Inca Kola 1.5 L",
-        monto: 5.5,
-      },
-    ]
-    : [];
+  const seleccionarPedido = (id) => {
+    setPedidoId(id);
+    const pedido = pedidos.find((item) => String(item.id) === String(id));
+    setNombreCliente(pedido?.cliente || "");
+    setDireccion(pedido?.delivery?.direccionEntrega || pedido?.direccionCliente || "");
+  };
 
-  const subtotal = totalItems.reduce(
-    (s, i) => s + i.monto,
-    0
-  );
+  const totalItems = pedidoSeleccionado?.detalles?.map((detalle) => ({
+    descripcion: `${detalle.cantidad} x ${detalle.nombreProducto}`,
+    monto: Number(detalle.subtotal),
+  })) || [];
+  const totalPromociones = pedidoSeleccionado?.detallePromociones?.map((detalle) => ({
+    descripcion: `${detalle.cantidad} x ${detalle.nombrePromocion || detalle.codigoPromocion || "Promoción"}`,
+    monto: Number(detalle.subtotal),
+  })) || [];
+  const lineasComprobante = [...totalItems, ...totalPromociones];
+
+  const total = Number(pedidoSeleccionado?.total || 0);
+  const subtotal = total / 1.18;
 
   const igv = subtotal * 0.18;
-  const total = subtotal + igv;
+
+  const descargarPdf = (comprobante) => {
+    const alto = Math.max(160, 115 + lineasComprobante.length * 12);
+    const pdf = new jsPDF({ unit: "mm", format: [80, alto] });
+    let y = 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.text("IKAGI DELI EXPRESS EIRL", 40, y, { align: "center" });
+    y += 7;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text(["RUC: 20123456789", "Av. Principal 123, Lima", "Tel: (01) 123-4567"], 40, y, { align: "center" });
+    y += 15;
+    pdf.line(6, y, 74, y);
+    y += 7;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.text(comprobante.tipoComprobante.toUpperCase(), 6, y);
+    y += 6;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text(`Nro: ${comprobante.numeroComprobante}`, 6, y);
+    y += 5;
+    pdf.text(`Fecha: ${new Date(comprobante.fechaEmision).toLocaleDateString("es-PE")}`, 6, y);
+    y += 6;
+    pdf.text(`Cliente: ${nombreCliente || pedidoSeleccionado?.cliente || "Venta anonima"}`, 6, y);
+    y += 5;
+    const lineasDireccion = pdf.splitTextToSize(`Direccion: ${direccionPedido}`, 68);
+    pdf.text(lineasDireccion, 6, y);
+    y += lineasDireccion.length * 4 + 4;
+    pdf.line(6, y, 74, y);
+    y += 6;
+
+    lineasComprobante.forEach((item) => {
+      const descripcion = pdf.splitTextToSize(item.descripcion, 48);
+      pdf.text(descripcion, 6, y);
+      pdf.text(`S/ ${item.monto.toFixed(2)}`, 74, y, { align: "right" });
+      y += Math.max(6, descripcion.length * 4 + 2);
+    });
+
+    pdf.line(6, y, 74, y);
+    y += 6;
+    pdf.text("Subtotal:", 45, y);
+    pdf.text(`S/ ${subtotal.toFixed(2)}`, 74, y, { align: "right" });
+    y += 5;
+    pdf.text("IGV (18%):", 45, y);
+    pdf.text(`S/ ${igv.toFixed(2)}`, 74, y, { align: "right" });
+    y += 6;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.text("TOTAL:", 45, y);
+    pdf.text(`S/ ${total.toFixed(2)}`, 74, y, { align: "right" });
+    pdf.save(`comprobante-${comprobante.numeroComprobante}.pdf`);
+  };
+
+  const emitir = async (accion) => {
+    if (!pedidoSeleccionado) return;
+    try {
+      let comprobante;
+      try {
+        comprobante = await comprobanteService.porVenta(Number(pedidoSeleccionado.id));
+      } catch {
+        comprobante = await comprobanteService.crear({
+          tipoComprobante,
+          numeroComprobante: `${tipoComprobante === "Boleta" ? "B001" : "F001"}-${Date.now()}`,
+          total,
+          rucCliente: tipoComprobante === "Factura" ? ruc : null,
+          razonSocial: tipoComprobante === "Factura" ? razonSocial : (nombreCliente || pedidoSeleccionado.cliente),
+          direccionFiscal: tipoComprobante === "Factura" ? direccion : direccionPedido,
+          idVenta: Number(pedidoSeleccionado.id),
+        });
+      }
+      setTipoComprobante(comprobante.tipoComprobante);
+      setPedidos((prev) => prev.map((pedido) => String(pedido.id) === String(pedidoSeleccionado.id)
+        ? { ...pedido, comprobante: comprobante.tipoComprobante, comprobanteData: comprobante }
+        : pedido));
+      if (accion === "impreso") {
+        mostrarNotificacion("Comprobante listo para imprimir");
+        setTimeout(() => window.print(), 100);
+      } else {
+        descargarPdf(comprobante);
+        mostrarNotificacion("PDF descargado correctamente");
+      }
+    } catch (error) { mostrarNotificacion(error); }
+  };
 
   return (
     <div>
@@ -54,6 +144,9 @@ export default function EmitirComprobante({
       <div className="contenedor-comprobante">
 
         <div className="form-comprobante" style={{ minWidth: 260 }}>
+          <select className="campo-texto" style={{ marginBottom: 18 }} value={pedidoId} onChange={(e) => seleccionarPedido(e.target.value)}>
+            {pedidos.map((pedido) => <option key={pedido.id} value={pedido.id}>Pedido #{pedido.id} - {pedido.cliente}</option>)}
+          </select>
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 12, color: "#555" }}>
               Tipo de Comprobante
@@ -106,14 +199,14 @@ export default function EmitirComprobante({
 
           <div style={{ display: "flex", gap: 10 }}>
             <button className="btn-secundario" style={{ padding: "10px 14px", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}
-              onClick={() => mostrarNotificacion("Comprobante impreso")}
+              onClick={() => emitir("impreso")}
             >
               <img src={impresora} alt="Impresora" style={{ width: 25, height: 25 }} />
               IMPRIMIR
             </button>
 
             <button className="btn-primario" style={{ padding: "10px 14px", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}
-              onClick={() => mostrarNotificacion("PDF descargado")}
+              onClick={() => emitir("generado")}
             >
               <img src={descargas} alt="Descarga" style={{ width: 25, height: 25 }} />
               DESCARGAR PDF
@@ -139,13 +232,16 @@ export default function EmitirComprobante({
           </div>
 
           <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: 12 }}>
-            Nº: 001-00123<br />
+            Nº: {pedidoSeleccionado?.comprobanteData?.numeroComprobante || "Pendiente"}<br />
             Fecha: {new Date().toLocaleDateString("es-PE")}
           </div>
 
           <div style={{ fontSize: "0.95rem", marginBottom: 12 }}>
             {tipoComprobante === "Boleta" ? (
-              <div>Cliente: {nombreCliente || "-"}</div>
+              <div>
+                Cliente: {nombreCliente || pedidoSeleccionado?.cliente || "-"}<br />
+                Dirección: {direccionPedido}
+              </div>
             ) : (
               <div style={{ fontSize: "0.95rem", marginBottom: 12 }}>
                 Razón Social: {razonSocial || "-"}<br />
@@ -155,7 +251,10 @@ export default function EmitirComprobante({
             )}
           </div>
 
-          {totalItems.map((item, i) => (
+          {lineasComprobante.length === 0 && (
+            <div style={{ color: "#999", fontSize: "0.9rem", marginBottom: 8 }}>Sin detalle de productos</div>
+          )}
+          {lineasComprobante.map((item, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", marginBottom: 6 }}>
               <span>{item.descripcion}</span>
               <span>S/ {item.monto.toFixed(2)}</span>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import lapiz from '../icons/lapiz.png';
 import basura from '../icons/basura.png';
+import { usuarioService } from "../../../services/resourceServices";
 
 export default function GestionUsuarios({
   usuarios,
@@ -12,33 +13,25 @@ export default function GestionUsuarios({
   const [form, setForm] = useState({
     nombre: "",
     usuario: "",
+    contrasenia: "",
     rol: "Empleado",
   });
 
-  const guardar = () => {
+  const guardar = async () => {
     if (!form.nombre || !form.usuario) return;
 
-    if (usuarioEdicion) {
-      setUsuarios((prev) =>
-        prev.map((u) =>
-          u.id === usuarioEdicion.id
-            ? { ...u, ...form }
-            : u
-        )
-      );
-
-      mostrarNotificacion("Usuario actualizado");
-    } else {
-      setUsuarios((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          ...form,
-        },
-      ]);
-
-      mostrarNotificacion("Usuario creado");
-    }
+    try {
+      const payload = { ...form, estado: usuarioEdicion?.estado ?? true };
+      const guardado = usuarioEdicion
+        ? await usuarioService.actualizar(usuarioEdicion.id, payload)
+        : await usuarioService.crear(payload);
+      if (usuarioEdicion) {
+        setUsuarios((prev) => prev.map((u) => u.id === usuarioEdicion.id ? guardado : u));
+        mostrarNotificacion("Usuario actualizado");
+      } else {
+        setUsuarios((prev) => [...prev, guardado]);
+        mostrarNotificacion("Usuario creado");
+      }
 
     setModalAbierto(false);
 
@@ -47,8 +40,10 @@ export default function GestionUsuarios({
     setForm({
       nombre: "",
       usuario: "",
+      contrasenia: "",
       rol: "Empleado",
     });
+    } catch (error) { mostrarNotificacion(error); }
   };
 
   const abrirEdicion = (usuario) => {
@@ -57,13 +52,15 @@ export default function GestionUsuarios({
     setForm({
       nombre: usuario.nombre,
       usuario: usuario.usuario,
+      contrasenia: "",
       rol: usuario.rol,
     });
 
     setModalAbierto(true);
   };
 
-  const eliminar = (id) => {
+  const eliminar = async (id) => {
+    await usuarioService.eliminar(id);
     setUsuarios((prev) => prev.filter((u) => u.id !== id));
     mostrarNotificacion("Usuario eliminado");
   };
@@ -106,9 +103,9 @@ export default function GestionUsuarios({
                     <img src={lapiz} alt="Editar" style={{ width: '25px', height: '25px' }} />
                   </button>
 
-                  {/*<button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(u.id)}>
+                  <button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(u.id)}>
                     <img src={basura} alt="Basura" style={{ width: '25px', height: '25px' }} />
-                  </button>*/}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -126,6 +123,8 @@ export default function GestionUsuarios({
               <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Nombre completo*" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} />
 
               <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Usuario*" value={form.usuario} onChange={(e) => setForm((f) => ({ ...f, usuario: e.target.value }))} />
+
+              <input className="campo-texto" type="password" style={{ padding: "12px", fontSize: "1rem" }} placeholder={usuarioEdicion ? "Nueva contraseña (opcional)" : "Contraseña*"} value={form.contrasenia} onChange={(e) => setForm((f) => ({ ...f, contrasenia: e.target.value }))} />
 
               <select className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} value={form.rol} onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}>
                 <option>Empleado</option>

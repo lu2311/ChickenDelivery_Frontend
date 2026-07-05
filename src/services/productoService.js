@@ -1,20 +1,19 @@
-import { API, authHeaders, handleResponse } from "./api";
+import { apiRequest } from "./api";
 
 export const productoService = {
   listar() {
-    return fetch(`${API}/productos`, { headers: authHeaders() }).then(handleResponse);
+    return apiRequest("/productos");
   },
   crear(data) {
-    return fetch(`${API}/productos`, {
+    return apiRequest("/productos", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(data),
-    }).then(handleResponse);
+    });
+  },
+  actualizar(id, data) {
+    return apiRequest(`/productos/${id}`, { method: "PUT", body: JSON.stringify(data) });
   },
   eliminar(id) {
-    return fetch(`${API}/productos/${id}`, {
-      method: "DELETE",
-      headers: authHeaders(),
-    }).then(handleResponse);
+    return apiRequest(`/productos/${id}`, { method: "DELETE" });
   },
 };

@@ -1,7 +1,7 @@
-export default function Notificacion({ mensaje }) {
+export default function Notificacion({ mensaje, tipo = "exito" }) {
   return (
-    <div className="notificacion">
-      ✓ {mensaje}
+    <div className={`notificacion notificacion-${tipo}`}>
+      {tipo === "error" ? "⚠" : "✓"} {mensaje}
     </div>
   );
 }

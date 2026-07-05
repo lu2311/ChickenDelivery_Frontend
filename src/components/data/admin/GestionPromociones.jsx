@@ -1,5 +1,6 @@
 import { useState } from "react";
 import basura from '../icons/basura.png';
+import { promocionService } from "../../../services/resourceServices";
 
 export default function GestionPromociones({
   promociones,
@@ -10,49 +11,44 @@ export default function GestionPromociones({
 
   const [form, setForm] = useState({
     nombre: "",
-    descuento: "",
+    codigo: "",
+    descripcion: "",
+    precioCombo: "",
     fechaInicio: "",
     fechaFin: "",
-    productos: "",
     estado: true,
   });
 
-  const guardar = () => {
+  const guardar = async () => {
     if (!form.nombre) return;
 
-    setPromociones((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        ...form,
-      },
-    ]);
-
-    mostrarNotificacion("Promoción creada");
-
-    setModalAbierto(false);
+    try {
+      const guardada = await promocionService.crear({ ...form, precioCombo: Number(form.precioCombo) });
+      setPromociones((prev) => [...prev, { ...guardada, precioCombo: Number(guardada.precioCombo) }]);
+      mostrarNotificacion("Promoción creada");
+      setModalAbierto(false);
 
     setForm({
       nombre: "",
-      descuento: "",
+      codigo: "",
+      descripcion: "",
+      precioCombo: "",
       fechaInicio: "",
       fechaFin: "",
-      productos: "",
       estado: true,
     });
+    } catch (error) { mostrarNotificacion(error); }
   };
 
-  const toggleEstado = (id) => {
-    setPromociones((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? { ...p, estado: !p.estado }
-          : p
-      )
-    );
+  const toggleEstado = async (promocion) => {
+    try {
+      const actualizada = await promocionService.actualizar(promocion.id, { ...promocion, estado: !promocion.estado });
+      setPromociones((prev) => prev.map((p) => p.id === promocion.id ? { ...actualizada, precioCombo: Number(actualizada.precioCombo) } : p));
+    } catch (error) { mostrarNotificacion(error); }
   };
 
-  const eliminar = (id) => {
+  const eliminar = async (id) => {
+    await promocionService.eliminar(id);
     setPromociones((prev) =>
       prev.filter((p) => p.id !== id)
     );
@@ -75,10 +71,10 @@ export default function GestionPromociones({
         <thead>
           <tr>
             <th>Nombre</th>
-            <th>Descuento</th>
+            <th>Código</th>
+            <th>Precio combo</th>
             <th>Fecha Inicio</th>
             <th>Fecha Fin</th>
-            <th>Productos</th>
             <th>Estado</th>
             <th>Acciones</th>
           </tr>
@@ -88,13 +84,13 @@ export default function GestionPromociones({
           {promociones.map((p) => (
             <tr key={p.id}>
               <td style={{ fontSize: "0.95rem" }}>{p.nombre}</td>
-              <td style={{ fontSize: "0.95rem" }}>{p.descuento}</td>
+              <td style={{ fontSize: "0.95rem" }}>{p.codigo}</td>
+              <td style={{ fontSize: "0.95rem" }}>S/ {p.precioCombo.toFixed(2)}</td>
               <td style={{ fontSize: "0.95rem" }}>{p.fechaInicio}</td>
               <td style={{ fontSize: "0.95rem" }}>{p.fechaFin}</td>
-              <td style={{ fontSize: "0.9rem" }}>{p.productos}</td>
 
               <td>
-                <button className={`toggle-switch ${p.estado ? "toggle-on" : "toggle-off"}`} style={{ transform: "scale(1.1)" }} onClick={() => toggleEstado(p.id)} />
+                <button className={`toggle-switch ${p.estado ? "toggle-on" : "toggle-off"}`} style={{ transform: "scale(1.1)" }} onClick={() => toggleEstado(p)} />
               </td>
 
               <td>
@@ -118,13 +114,15 @@ export default function GestionPromociones({
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Nombre*" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} />
 
-            <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Descuento (ej: 50%)" value={form.descuento} onChange={(e) => setForm((f) => ({ ...f, descuento: e.target.value }))} />
+            <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Código*" value={form.codigo} onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))} />
 
-            <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Fecha Inicio (dd/mm/aaaa)" value={form.fechaInicio} onChange={(e) => setForm((f) => ({ ...f, fechaInicio: e.target.value }))} />
+            <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Descripción" value={form.descripcion} onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))} />
 
-            <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Fecha Fin (dd/mm/aaaa)" value={form.fechaFin} onChange={(e) => setForm((f) => ({ ...f, fechaFin: e.target.value }))} />
+            <input className="campo-texto" type="number" step="0.01" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Precio combo*" value={form.precioCombo} onChange={(e) => setForm((f) => ({ ...f, precioCombo: e.target.value }))} />
 
-            <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} placeholder="Productos involucrados" value={form.productos} onChange={(e) => setForm((f) => ({ ...f, productos: e.target.value }))} />
+            <input className="campo-texto" type="date" style={{ padding: "12px", fontSize: "1rem" }} value={form.fechaInicio} onChange={(e) => setForm((f) => ({ ...f, fechaInicio: e.target.value }))} />
+
+            <input className="campo-texto" type="date" style={{ padding: "12px", fontSize: "1rem" }} value={form.fechaFin} onChange={(e) => setForm((f) => ({ ...f, fechaFin: e.target.value }))} />
           </div>
 
           <div style={{ display: "flex", gap: 12, marginTop: 20, justifyContent: "flex-end" }}>

@@ -1,50 +1,61 @@
 import { useState } from "react";
 import lapiz from '../icons/lapiz.png';
 import basura from '../icons/basura.png';
+import { productoService } from "../../../services/productoService";
 
-export default function GestionProductos({ productos, setProductos, mostrarNotificacion }) {
+export default function GestionProductos({ productos, setProductos, mostrarNotificacion, categorias }) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [productoEdicion, setProductoEdicion] = useState(null);
 
   const [form, setForm] = useState({
     nombre: "",
     precio: "",
-    categoria: "Pollo",
+    idCategoria: "",
     estado: true,
   });
 
   const abrirNuevo = () => {
     setProductoEdicion(null);
-    setForm({ nombre: "", precio: "", categoria: "Pollo", estado: true });
+    setForm({ nombre: "", precio: "", idCategoria: categorias[0]?.id || "", estado: true });
     setModalAbierto(true);
   };
 
   const abrirEdicion = (producto) => {
     setProductoEdicion(producto);
-    setForm({ nombre: producto.nombre, precio: producto.precio, categoria: producto.categoria, estado: producto.estado });
+    setForm({ nombre: producto.nombre, precio: producto.precio, idCategoria: producto.idCategoria, estado: producto.estado });
     setModalAbierto(true);
   };
 
-  const guardar = () => {
+  const guardar = async () => {
     if (!form.nombre || !form.precio) return;
     const precio = parseFloat(form.precio);
 
-    if (productoEdicion) {
-      setProductos((prev) => prev.map((p) => p.id === productoEdicion.id ? { ...p, ...form, precio } : p));
+    const payload = { ...form, precio, idCategoria: Number(form.idCategoria) };
+    try {
+      const guardado = productoEdicion
+        ? await productoService.actualizar(productoEdicion.id, payload)
+        : await productoService.crear(payload);
+      const normalizado = { ...guardado, precio: Number(guardado.precio), categoria: guardado.nombreCategoria || "Sin categoría" };
+      if (productoEdicion) {
+        setProductos((prev) => prev.map((p) => p.id === productoEdicion.id ? normalizado : p));
       mostrarNotificacion("Producto actualizado");
-    } else {
-      setProductos((prev) => [...prev, { id: Date.now(), ...form, precio }]);
-      mostrarNotificacion("Producto creado");
-    }
-
-    setModalAbierto(false);
+      } else {
+        setProductos((prev) => [...prev, normalizado]);
+        mostrarNotificacion("Producto creado");
+      }
+      setModalAbierto(false);
+    } catch (error) { mostrarNotificacion(error); }
   };
 
-  const toggleEstado = (id) => {
-    setProductos((prev) => prev.map((p) => p.id === id ? { ...p, estado: !p.estado } : p));
+  const toggleEstado = async (producto) => {
+    try {
+      const actualizado = await productoService.actualizar(producto.id, { ...producto, estado: !producto.estado });
+      setProductos((prev) => prev.map((p) => p.id === producto.id ? { ...p, ...actualizado, precio: Number(actualizado.precio), categoria: actualizado.nombreCategoria } : p));
+    } catch (error) { mostrarNotificacion(error); }
   };
 
-  const eliminar = (id) => {
+  const eliminar = async (id) => {
+    await productoService.eliminar(id);
     setProductos((prev) => prev.filter((p) => p.id !== id));
     mostrarNotificacion("Producto eliminado");
   };
@@ -85,9 +96,9 @@ export default function GestionProductos({ productos, setProductos, mostrarNotif
                 </td>
 
                 <td>
-                  <button className={`toggle-switch ${p.estado ? "toggle-on" : "toggle-off"}`} onClick={() => toggleEstado(p.id)} style={{ marginRight: 8, transform: "scale(1.1)" }} />
+                  <button className={`toggle-switch ${p.estado ? "toggle-on" : "toggle-off"}`} onClick={() => toggleEstado(p)} style={{ marginRight: 8, transform: "scale(1.1)" }} />
                   <button className="btn-accion editar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => abrirEdicion(p)}><img src={lapiz} alt="Editar" style={{ width: '25px', height: '25px' }} /></button>
-                  {/*<button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(p.id)}><img src={basura} alt="Basura" style={{ width: '25px', height: '25px' }} /></button>*/}
+                  <button className="btn-accion eliminar" style={{ fontSize: "0.95rem", padding: "4px 6px" }} onClick={() => eliminar(p.id)}><img src={basura} alt="Basura" style={{ width: '25px', height: '25px' }} /></button>
                 </td>
               </tr>
             ))}
@@ -107,10 +118,8 @@ export default function GestionProductos({ productos, setProductos, mostrarNotif
 
               <input className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} type="number" placeholder="Precio" value={form.precio} onChange={(e) => setForm((f) => ({ ...f, precio: e.target.value }))} />
 
-              <select className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} value={form.categoria} onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}>
-                <option>Pollo</option>
-                <option>Bebidas</option>
-                <option>Combos</option>
+              <select className="campo-texto" style={{ padding: "12px", fontSize: "1rem" }} value={form.idCategoria} onChange={(e) => setForm((f) => ({ ...f, idCategoria: e.target.value }))}>
+                {categorias.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
               </select>
             </div>
 

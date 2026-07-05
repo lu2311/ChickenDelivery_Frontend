@@ -1,28 +1,51 @@
 import { useState } from "react";
 import lupa from '../icons/lupa.png';
 import flecha_izq from '../icons/flecha-izquierda.png';
+import { registrarVentaCompleta } from "../../../services/orderRegistration";
 
 export default function NuevoPedido({
   navegar,
   clientes,
   productos,
+  promociones = [],
   pedidos,
   setPedidos,
-  mostrarNotificacion
+  mostrarNotificacion,
+  usuario,
 }) {
   const [nombre, setNombre] = useState("");
-  const [dniTelefono, setDniTelefono] = useState("");
-  const [metodoPago, setMetodoPago] = useState("Efectivo");
+  const [dni, setDni] = useState("");
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+  const [ventaAnonima, setVentaAnonima] = useState(false);
+  const [direccionEntrega, setDireccionEntrega] = useState("");
+  const [metodoPago, setMetodoPago] = useState("");
+  const [tipoEntrega, setTipoEntrega] = useState("");
+  const [canalVenta, setCanalVenta] = useState("");
+  const [errores, setErrores] = useState({});
   const [categoriaActiva, setCategoriaActiva] = useState("TODOS");
   const [busqueda, setBusqueda] = useState("");
   const [itemsPedido, setItemsPedido] = useState([]);
 
-  const categorias = ["TODOS", "POLLO", "BEBIDAS", "COMBOS"];
+  const promocionesActivas = promociones.filter((promocion) => promocion.estado).map((promocion) => ({
+    ...promocion,
+    tipo: "promocion",
+    categoria: "Promociones",
+    precio: Number(promocion.precioCombo),
+  }));
+  const articulos = [
+    ...productos.map((producto) => ({ ...producto, tipo: producto.tipo || "producto" })),
+    ...promocionesActivas,
+  ];
+  const categorias = [
+    "TODOS",
+    ...Array.from(new Set(productos.filter((producto) => producto.estado).map((producto) => producto.categoria?.toUpperCase()).filter(Boolean))),
+    "PROMOCIONES",
+  ];
 
-  const productosFiltrados = productos.filter((p) => {
+  const productosFiltrados = articulos.filter((p) => {
     const coincideCategoria =
       categoriaActiva === "TODOS" ||
-      p.categoria.toUpperCase() === categoriaActiva;
+      p.categoria?.toUpperCase() === categoriaActiva;
 
     const coincideBusqueda = p.nombre
       .toLowerCase()
@@ -33,11 +56,12 @@ export default function NuevoPedido({
 
   const agregarProducto = (prod) => {
     setItemsPedido((prev) => {
-      const existe = prev.find((i) => i.id === prod.id);
+      const clave = (item) => `${item.tipo || "producto"}-${item.id}`;
+      const existe = prev.find((i) => clave(i) === clave(prod));
 
       if (existe) {
         return prev.map((i) =>
-          i.id === prod.id
+          clave(i) === clave(prod)
             ? { ...i, cantidad: i.cantidad + 1 }
             : i
         );
@@ -45,48 +69,93 @@ export default function NuevoPedido({
 
       return [...prev, { ...prod, cantidad: 1 }];
     });
+    setErrores((prev) => ({ ...prev, productos: false }));
+    mostrarNotificacion(`Producto agregado: ${prod.nombre}`);
   };
 
-  const cambiarCantidad = (id, delta) => {
+  const cambiarCantidad = (claveItem, delta) => {
+    const clave = (item) => `${item.tipo || "producto"}-${item.id}`;
+    const producto = itemsPedido.find((item) => clave(item) === claveItem);
+    if (!producto) return;
     setItemsPedido((prev) =>
       prev
         .map((i) =>
-          i.id === id
+          clave(i) === claveItem
             ? { ...i, cantidad: Math.max(1, i.cantidad + delta) }
             : i
         )
         .filter(
-          (i) => !(i.id === id && i.cantidad + delta < 1)
+          (i) => !(clave(i) === claveItem && i.cantidad + delta < 1)
         )
+    );
+    mostrarNotificacion(
+      delta < 0 && producto.cantidad === 1
+        ? `Producto eliminado: ${producto.nombre}`
+        : `Cantidad modificada: ${producto.nombre}`
     );
   };
 
-  const total = itemsPedido.reduce(
+  const subtotalProductos = itemsPedido.reduce(
     (s, i) => s + i.precio * i.cantidad,
     0
   );
+  const costoDelivery = tipoEntrega === "Delivery" ? 3 : 0;
+  const total = subtotalProductos + costoDelivery;
 
-  const registrarPedido = () => {
-    if (!nombre || itemsPedido.length === 0) return;
+  const manejarDni = (valor) => {
+    const nuevoDni = valor.replace(/\D/g, "").slice(0, 8);
+    setDni(nuevoDni);
+    setVentaAnonima(false);
+    const cliente = nuevoDni.length === 8
+      ? clientes.find((item) => item.dni === nuevoDni)
+      : null;
+    setClienteSeleccionado(cliente || null);
+    setNombre(cliente?.nombre || "");
+    setDireccionEntrega(cliente?.direccion || "");
+    setErrores((prev) => ({ ...prev, cliente: false, direccion: false }));
+  };
 
-    const nuevoPedido = {
-      id: String(pedidos.length + 1).padStart(3, "0"),
-      fecha:
-        new Date().toLocaleDateString("es-PE") +
-        " " +
-        new Date().toLocaleTimeString("es-PE", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      cliente: nombre,
-      total,
-      comprobante: "Boleta",
+  const activarVentaAnonima = () => {
+    setVentaAnonima(true);
+    setClienteSeleccionado(null);
+    setNombre("Venta anónima");
+    setDireccionEntrega("");
+    setErrores((prev) => ({ ...prev, cliente: false }));
+  };
+
+  const registrarPedido = async () => {
+    const nuevosErrores = {
+      cliente: !clienteSeleccionado && !ventaAnonima,
+      productos: itemsPedido.length === 0,
+      tipoEntrega: !tipoEntrega,
+      direccion: tipoEntrega === "Delivery" && !direccionEntrega.trim(),
+      metodoPago: !metodoPago,
+      canalVenta: !canalVenta,
     };
+    setErrores(nuevosErrores);
+    const faltantes = Object.entries(nuevosErrores).filter(([, value]) => value).map(([key]) => ({
+      cliente: "cliente o venta anónima", productos: "productos", tipoEntrega: "tipo de entrega",
+      direccion: "dirección", metodoPago: "método de pago", canalVenta: "canal de venta",
+    }[key]));
+    if (faltantes.length) {
+      mostrarNotificacion(`Complete los campos obligatorios: ${faltantes.join(", ")}`, "error");
+      return;
+    }
 
-    setPedidos((prev) => [...prev, nuevoPedido]);
-
-    mostrarNotificacion("Pedido registrado correctamente");
-    navegar("empleado-home");
+    try {
+      const nuevoPedido = await registrarVentaCompleta({
+        usuario,
+        cliente: clienteSeleccionado,
+        items: itemsPedido,
+        tipoEntrega,
+        metodoPago,
+        canalVenta,
+        direccionEntrega,
+      });
+      setPedidos((prev) => [...prev, nuevoPedido]);
+      mostrarNotificacion("Pedido registrado correctamente");
+      navegar("empleado-home");
+    } catch (error) { mostrarNotificacion(error); }
   };
 
   return (
@@ -111,19 +180,57 @@ export default function NuevoPedido({
             </div>
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <input className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} placeholder="Nombre*" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+              <input className={`campo-texto ${errores.cliente ? "campo-error" : ""}`} style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} placeholder="DNI (8 dígitos)*" value={dni} onChange={(e) => manejarDni(e.target.value)} disabled={ventaAnonima} />
 
-              <input className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} placeholder="DNI o Teléfono*" value={dniTelefono} onChange={(e) => setDniTelefono(e.target.value)} />
+              <input className="campo-texto" style={{ flex: 1, minWidth: 180, padding: "12px", fontSize: "1rem" }} placeholder="Nombre del cliente" value={nombre} readOnly />
 
-              <select className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
+              {clienteSeleccionado && (
+                <input className="campo-texto" style={{ flex: 1, minWidth: 160, padding: "12px", fontSize: "1rem" }} value={clienteSeleccionado.telefono || "Sin teléfono"} readOnly />
+              )}
+
+              {clienteSeleccionado && tipoEntrega !== "Delivery" && (
+                <input className="campo-texto" style={{ flex: "1 1 100%", padding: "12px", fontSize: "1rem" }} value={clienteSeleccionado.direccion || "Sin dirección registrada"} readOnly />
+              )}
+
+              {!ventaAnonima && (
+                <button type="button" className="btn-secundario" style={{ padding: "12px 16px" }} onClick={activarVentaAnonima}>
+                  VENTA ANÓNIMA
+                </button>
+              )}
+
+              {ventaAnonima && (
+                <button type="button" className="btn-secundario" style={{ padding: "12px 16px" }} onClick={() => manejarDni("")}>
+                  USAR CLIENTE REGISTRADO
+                </button>
+              )}
+
+              <select className={`campo-texto ${errores.metodoPago ? "campo-error" : ""}`} style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={metodoPago} onChange={(e) => { setMetodoPago(e.target.value); setErrores((prev) => ({ ...prev, metodoPago: false })); }}>
+                <option value="">Método de pago*</option>
                 <option>Efectivo</option>
                 <option>Yape</option>
                 <option>Tarjeta</option>
               </select>
+
+              <select className={`campo-texto ${errores.tipoEntrega ? "campo-error" : ""}`} style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={tipoEntrega} onChange={(e) => { setTipoEntrega(e.target.value); setErrores((prev) => ({ ...prev, tipoEntrega: false })); }}>
+                <option value="">Tipo de entrega*</option>
+                <option>Recojo</option>
+                <option>Delivery</option>
+              </select>
+
+              <select className={`campo-texto ${errores.canalVenta ? "campo-error" : ""}`} style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={canalVenta} onChange={(e) => { setCanalVenta(e.target.value); setErrores((prev) => ({ ...prev, canalVenta: false })); }}>
+                <option value="">Canal de venta*</option>
+                <option>Presencial</option>
+                <option>WhatsApp</option>
+                <option>Telefono</option>
+              </select>
+
+              {tipoEntrega === "Delivery" && (
+                <input className={`campo-texto ${errores.direccion ? "campo-error" : ""}`} style={{ flex: "1 1 100%", padding: "12px", fontSize: "1rem" }} placeholder={ventaAnonima ? "Dirección temporal de entrega*" : "Dirección de entrega*"} value={direccionEntrega} onChange={(e) => { setDireccionEntrega(e.target.value); setErrores((prev) => ({ ...prev, direccion: false })); }} />
+              )}
             </div>
           </div>
 
-          <div className="panel-pedido" style={{ padding: 16 }}>
+          <div className={`panel-pedido ${errores.productos ? "panel-error" : ""}`} style={{ padding: 16 }}>
 
             <div style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 12, color: "#555" }}>
               Productos
@@ -143,10 +250,10 @@ export default function NuevoPedido({
             </div>
 
             {productosFiltrados.map((prod) => (
-              <div key={prod.id} className="producto-item" style={{ padding: "10px 12px" }}>
+              <div key={`${prod.tipo}-${prod.id}`} className="producto-item" style={{ padding: "10px 12px" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: "1rem" }}>{prod.nombre}</div>
-                  <div style={{ color: "#888", fontSize: "0.9rem" }}>S/ {prod.precio.toFixed(2)}</div>
+                  <div style={{ color: "#888", fontSize: "0.9rem" }}>S/ {Number(prod.precio).toFixed(2)}</div>
                 </div>
 
                 <button className="btn-primario" style={{ padding: "8px 14px", fontSize: "0.95rem" }} onClick={() => agregarProducto(prod)}>
@@ -183,18 +290,18 @@ export default function NuevoPedido({
 
               <tbody>
                 {itemsPedido.map((item) => (
-                  <tr key={item.id}>
+                  <tr key={`${item.tipo || "producto"}-${item.id}`}>
                     <td style={{ fontSize: "0.95rem" }}>{item.nombre}</td>
 
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <button className="btn-accion" onClick={() => cambiarCantidad(item.id, -1)} style={{ fontSize: "0.95rem", padding: "2px 6px" }}>
+                        <button className="btn-accion" onClick={() => cambiarCantidad(`${item.tipo || "producto"}-${item.id}`, -1)} style={{ fontSize: "0.95rem", padding: "2px 6px" }}>
                           −
                         </button>
 
                         <span style={{ fontSize: "0.95rem" }}>{item.cantidad}</span>
 
-                        <button className="btn-accion" onClick={() => cambiarCantidad(item.id, 1)} style={{ fontSize: "0.95rem", padding: "2px 6px" }}>
+                        <button className="btn-accion" onClick={() => cambiarCantidad(`${item.tipo || "producto"}-${item.id}`, 1)} style={{ fontSize: "0.95rem", padding: "2px 6px" }}>
                           +
                         </button>
                       </div>
@@ -214,7 +321,10 @@ export default function NuevoPedido({
             )}
 
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, borderTop: "1px solid #eee", paddingTop: 10, marginBottom: 16, fontSize: "1rem" }}>
-              <span>Total</span>
+              <div>
+                <div>Total</div>
+                {costoDelivery > 0 && <small style={{ fontWeight: 400, color: "#777" }}>Incluye delivery: S/ {costoDelivery.toFixed(2)}</small>}
+              </div>
               <span>S/ {total.toFixed(2)}</span>
             </div>
 
@@ -223,7 +333,7 @@ export default function NuevoPedido({
                 CANCELAR
               </button>
 
-              <button className="btn-verde" style={{ padding: "10px 12px", fontSize: "0.95rem" }} onClick={registrarPedido} disabled={!nombre || itemsPedido.length === 0}>
+              <button className="btn-verde" style={{ padding: "10px 12px", fontSize: "0.95rem" }} onClick={registrarPedido}>
                 🖨 REGISTRAR
               </button>
             </div>
