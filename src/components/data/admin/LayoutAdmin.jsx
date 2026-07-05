@@ -115,6 +115,7 @@ export default function LayoutAdmin({
           <Reportes
             pedidos={pedidos}
             productos={productos}
+            mostrarNotificacion={mostrarNotificacion}
           />
         )}
 
