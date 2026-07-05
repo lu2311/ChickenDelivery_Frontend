@@ -7,6 +7,7 @@ export default function NuevoPedido({
   navegar,
   clientes,
   productos,
+  promociones = [],
   pedidos,
   setPedidos,
   mostrarNotificacion,
@@ -25,12 +26,26 @@ export default function NuevoPedido({
   const [busqueda, setBusqueda] = useState("");
   const [itemsPedido, setItemsPedido] = useState([]);
 
-  const categorias = ["TODOS", "POLLO", "BEBIDAS", "COMBOS"];
+  const promocionesActivas = promociones.filter((promocion) => promocion.estado).map((promocion) => ({
+    ...promocion,
+    tipo: "promocion",
+    categoria: "Promociones",
+    precio: Number(promocion.precioCombo),
+  }));
+  const articulos = [
+    ...productos.map((producto) => ({ ...producto, tipo: producto.tipo || "producto" })),
+    ...promocionesActivas,
+  ];
+  const categorias = [
+    "TODOS",
+    ...Array.from(new Set(productos.filter((producto) => producto.estado).map((producto) => producto.categoria?.toUpperCase()).filter(Boolean))),
+    "PROMOCIONES",
+  ];
 
-  const productosFiltrados = productos.filter((p) => {
+  const productosFiltrados = articulos.filter((p) => {
     const coincideCategoria =
       categoriaActiva === "TODOS" ||
-      p.categoria.toUpperCase() === categoriaActiva;
+      p.categoria?.toUpperCase() === categoriaActiva;
 
     const coincideBusqueda = p.nombre
       .toLowerCase()
@@ -41,11 +56,12 @@ export default function NuevoPedido({
 
   const agregarProducto = (prod) => {
     setItemsPedido((prev) => {
-      const existe = prev.find((i) => i.id === prod.id);
+      const clave = (item) => `${item.tipo || "producto"}-${item.id}`;
+      const existe = prev.find((i) => clave(i) === clave(prod));
 
       if (existe) {
         return prev.map((i) =>
-          i.id === prod.id
+          clave(i) === clave(prod)
             ? { ...i, cantidad: i.cantidad + 1 }
             : i
         );
@@ -57,18 +73,19 @@ export default function NuevoPedido({
     mostrarNotificacion(`Producto agregado: ${prod.nombre}`);
   };
 
-  const cambiarCantidad = (id, delta) => {
-    const producto = itemsPedido.find((item) => item.id === id);
+  const cambiarCantidad = (claveItem, delta) => {
+    const clave = (item) => `${item.tipo || "producto"}-${item.id}`;
+    const producto = itemsPedido.find((item) => clave(item) === claveItem);
     if (!producto) return;
     setItemsPedido((prev) =>
       prev
         .map((i) =>
-          i.id === id
+          clave(i) === claveItem
             ? { ...i, cantidad: Math.max(1, i.cantidad + delta) }
             : i
         )
         .filter(
-          (i) => !(i.id === id && i.cantidad + delta < 1)
+          (i) => !(clave(i) === claveItem && i.cantidad + delta < 1)
         )
     );
     mostrarNotificacion(
@@ -233,10 +250,10 @@ export default function NuevoPedido({
             </div>
 
             {productosFiltrados.map((prod) => (
-              <div key={prod.id} className="producto-item" style={{ padding: "10px 12px" }}>
+              <div key={`${prod.tipo}-${prod.id}`} className="producto-item" style={{ padding: "10px 12px" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: "1rem" }}>{prod.nombre}</div>
-                  <div style={{ color: "#888", fontSize: "0.9rem" }}>S/ {prod.precio.toFixed(2)}</div>
+                  <div style={{ color: "#888", fontSize: "0.9rem" }}>S/ {Number(prod.precio).toFixed(2)}</div>
                 </div>
 
                 <button className="btn-primario" style={{ padding: "8px 14px", fontSize: "0.95rem" }} onClick={() => agregarProducto(prod)}>
@@ -273,18 +290,18 @@ export default function NuevoPedido({
 
               <tbody>
                 {itemsPedido.map((item) => (
-                  <tr key={item.id}>
+                  <tr key={`${item.tipo || "producto"}-${item.id}`}>
                     <td style={{ fontSize: "0.95rem" }}>{item.nombre}</td>
 
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <button className="btn-accion" onClick={() => cambiarCantidad(item.id, -1)} style={{ fontSize: "0.95rem", padding: "2px 6px" }}>
+                        <button className="btn-accion" onClick={() => cambiarCantidad(`${item.tipo || "producto"}-${item.id}`, -1)} style={{ fontSize: "0.95rem", padding: "2px 6px" }}>
                           −
                         </button>
 
                         <span style={{ fontSize: "0.95rem" }}>{item.cantidad}</span>
 
-                        <button className="btn-accion" onClick={() => cambiarCantidad(item.id, 1)} style={{ fontSize: "0.95rem", padding: "2px 6px" }}>
+                        <button className="btn-accion" onClick={() => cambiarCantidad(`${item.tipo || "producto"}-${item.id}`, 1)} style={{ fontSize: "0.95rem", padding: "2px 6px" }}>
                           +
                         </button>
                       </div>

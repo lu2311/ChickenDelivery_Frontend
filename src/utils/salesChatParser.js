@@ -97,9 +97,10 @@ export function parseCatalogItems(text, products) {
 
 export function mergeSaleItems(current, additions) {
   return additions.reduce((result, addition) => {
-    const existing = result.find((item) => item.id === addition.id);
+    const itemKey = (item) => `${item.tipo || "producto"}-${item.id}`;
+    const existing = result.find((item) => itemKey(item) === itemKey(addition));
     return existing
-      ? result.map((item) => item.id === addition.id ? { ...item, cantidad: item.cantidad + addition.cantidad } : item)
+      ? result.map((item) => itemKey(item) === itemKey(addition) ? { ...item, cantidad: item.cantidad + addition.cantidad } : item)
       : [...result, addition];
   }, [...current]);
 }

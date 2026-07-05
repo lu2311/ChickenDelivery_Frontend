@@ -45,7 +45,7 @@ function extractFields(text, current, productos, clientes) {
   return next;
 }
 
-export default function VentaChat({ clientes, productos, usuario, setPedidos, mostrarNotificacion }) {
+export default function VentaChat({ clientes, productos, promociones = [], usuario, setPedidos, mostrarNotificacion }) {
   const [messages, setMessages] = useState([
     { from: "bot", text: "Hola, soy Kira. Escríbeme la venta completa o empieza indicándome el DNI del cliente." },
   ]);
@@ -55,7 +55,15 @@ export default function VentaChat({ clientes, productos, usuario, setPedidos, mo
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
 
-  const activeProducts = useMemo(() => productos.filter((producto) => producto.estado), [productos]);
+  const activeProducts = useMemo(() => [
+    ...productos.filter((producto) => producto.estado).map((producto) => ({ ...producto, tipo: "producto" })),
+    ...promociones.filter((promocion) => promocion.estado).map((promocion) => ({
+      ...promocion,
+      tipo: "promocion",
+      categoria: "Promociones",
+      precio: Number(promocion.precioCombo),
+    })),
+  ], [productos, promociones]);
 
   useEffect(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
 

@@ -96,6 +96,7 @@ const manejarSalir = () => {
           pedidos={pedidos}
           setPedidos={setPedidos}
           productos={productos}
+          promociones={promociones}
           mostrarNotificacion={mostrarNotificacion}
         />
       )}

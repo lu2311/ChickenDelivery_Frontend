@@ -3,7 +3,7 @@ import historial from '../icons/historial.png';
 import comprobante from '../icons/comprobante.png';
 import VentaChat from './VentaChat';
 
-export default function EmpleadoHome({ navegar, pedidos, usuario, clientes, productos, setPedidos, mostrarNotificacion }) {
+export default function EmpleadoHome({ navegar, pedidos, usuario, clientes, productos, promociones, setPedidos, mostrarNotificacion }) {
   const ventasHoy = pedidos.reduce((s, p) => s + p.total, 0);
   return (
     <div className="employee-home-grid">
@@ -35,7 +35,7 @@ export default function EmpleadoHome({ navegar, pedidos, usuario, clientes, prod
       </div>
       </div>
 
-      <VentaChat clientes={clientes} productos={productos} usuario={usuario} setPedidos={setPedidos} mostrarNotificacion={mostrarNotificacion} />
+      <VentaChat clientes={clientes} productos={productos} promociones={promociones} usuario={usuario} setPedidos={setPedidos} mostrarNotificacion={mostrarNotificacion} />
     </div>
   );
 }
