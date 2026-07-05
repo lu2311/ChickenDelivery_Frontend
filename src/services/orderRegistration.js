@@ -1,4 +1,4 @@
-import { deliveryService, detalleVentaService, ventaService } from "./resourceServices";
+import { deliveryService, detallePromocionService, detalleVentaService, ventaService } from "./resourceServices";
 
 export async function registrarVentaCompleta({
   usuario,
@@ -22,9 +22,20 @@ export async function registrarVentaCompleta({
     idCliente: cliente?.id || null,
   });
 
-  await Promise.all(items.map((item) => detalleVentaService.crear({
+  const productItems = items.filter((item) => item.tipo !== "promocion");
+  const promotionItems = items.filter((item) => item.tipo === "promocion");
+
+  const detalles = await Promise.all(productItems.map((item) => detalleVentaService.crear({
     idVenta: venta.id,
     idProducto: item.id,
+    cantidad: item.cantidad,
+    precioUnitario: Number(item.precio),
+    subtotal: Number(item.precio) * item.cantidad,
+  })));
+
+  const detallePromociones = await Promise.all(promotionItems.map((item) => detallePromocionService.crear({
+    idVenta: venta.id,
+    idPromocion: item.id,
     cantidad: item.cantidad,
     precioUnitario: Number(item.precio),
     subtotal: Number(item.precio) * item.cantidad,
@@ -46,6 +57,8 @@ export async function registrarVentaCompleta({
     cliente: cliente?.nombre || "Venta anónima",
     direccionCliente: cliente?.direccion || null,
     delivery,
+    detalles,
+    detallePromociones,
     total: Number(venta.total),
     comprobante: "Pendiente",
   };

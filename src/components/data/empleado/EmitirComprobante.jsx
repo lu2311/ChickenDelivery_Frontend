@@ -32,6 +32,11 @@ export default function EmitirComprobante({
     descripcion: `${detalle.cantidad} x ${detalle.nombreProducto}`,
     monto: Number(detalle.subtotal),
   })) || [];
+  const totalPromociones = pedidoSeleccionado?.detallePromociones?.map((detalle) => ({
+    descripcion: `${detalle.cantidad} x ${detalle.nombrePromocion || detalle.codigoPromocion || "Promoción"}`,
+    monto: Number(detalle.subtotal),
+  })) || [];
+  const lineasComprobante = [...totalItems, ...totalPromociones];
 
   const total = Number(pedidoSeleccionado?.total || 0);
   const subtotal = total / 1.18;
@@ -39,7 +44,7 @@ export default function EmitirComprobante({
   const igv = subtotal * 0.18;
 
   const descargarPdf = (comprobante) => {
-    const alto = Math.max(160, 115 + totalItems.length * 12);
+    const alto = Math.max(160, 115 + lineasComprobante.length * 12);
     const pdf = new jsPDF({ unit: "mm", format: [80, alto] });
     let y = 10;
 
@@ -71,7 +76,7 @@ export default function EmitirComprobante({
     pdf.line(6, y, 74, y);
     y += 6;
 
-    totalItems.forEach((item) => {
+    lineasComprobante.forEach((item) => {
       const descripcion = pdf.splitTextToSize(item.descripcion, 48);
       pdf.text(descripcion, 6, y);
       pdf.text(`S/ ${item.monto.toFixed(2)}`, 74, y, { align: "right" });
@@ -246,7 +251,10 @@ export default function EmitirComprobante({
             )}
           </div>
 
-          {totalItems.map((item, i) => (
+          {lineasComprobante.length === 0 && (
+            <div style={{ color: "#999", fontSize: "0.9rem", marginBottom: 8 }}>Sin detalle de productos</div>
+          )}
+          {lineasComprobante.map((item, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", marginBottom: 6 }}>
               <span>{item.descripcion}</span>
               <span>S/ {item.monto.toFixed(2)}</span>
