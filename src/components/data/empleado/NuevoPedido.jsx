@@ -1,7 +1,7 @@
 import { useState } from "react";
 import lupa from '../icons/lupa.png';
 import flecha_izq from '../icons/flecha-izquierda.png';
-import { deliveryService, detalleVentaService, ventaService } from "../../../services/resourceServices";
+import { registrarVentaCompleta } from "../../../services/orderRegistration";
 
 export default function NuevoPedido({
   navegar,
@@ -17,9 +17,10 @@ export default function NuevoPedido({
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
   const [ventaAnonima, setVentaAnonima] = useState(false);
   const [direccionEntrega, setDireccionEntrega] = useState("");
-  const [metodoPago, setMetodoPago] = useState("Efectivo");
-  const [tipoEntrega, setTipoEntrega] = useState("Recojo");
-  const [canalVenta, setCanalVenta] = useState("Presencial");
+  const [metodoPago, setMetodoPago] = useState("");
+  const [tipoEntrega, setTipoEntrega] = useState("");
+  const [canalVenta, setCanalVenta] = useState("");
+  const [errores, setErrores] = useState({});
   const [categoriaActiva, setCategoriaActiva] = useState("TODOS");
   const [busqueda, setBusqueda] = useState("");
   const [itemsPedido, setItemsPedido] = useState([]);
@@ -52,9 +53,13 @@ export default function NuevoPedido({
 
       return [...prev, { ...prod, cantidad: 1 }];
     });
+    setErrores((prev) => ({ ...prev, productos: false }));
+    mostrarNotificacion(`Producto agregado: ${prod.nombre}`);
   };
 
   const cambiarCantidad = (id, delta) => {
+    const producto = itemsPedido.find((item) => item.id === id);
+    if (!producto) return;
     setItemsPedido((prev) =>
       prev
         .map((i) =>
@@ -65,6 +70,11 @@ export default function NuevoPedido({
         .filter(
           (i) => !(i.id === id && i.cantidad + delta < 1)
         )
+    );
+    mostrarNotificacion(
+      delta < 0 && producto.cantidad === 1
+        ? `Producto eliminado: ${producto.nombre}`
+        : `Cantidad modificada: ${producto.nombre}`
     );
   };
 
@@ -85,6 +95,7 @@ export default function NuevoPedido({
     setClienteSeleccionado(cliente || null);
     setNombre(cliente?.nombre || "");
     setDireccionEntrega(cliente?.direccion || "");
+    setErrores((prev) => ({ ...prev, cliente: false, direccion: false }));
   };
 
   const activarVentaAnonima = () => {
@@ -92,51 +103,38 @@ export default function NuevoPedido({
     setClienteSeleccionado(null);
     setNombre("Venta anónima");
     setDireccionEntrega("");
+    setErrores((prev) => ({ ...prev, cliente: false }));
   };
 
   const registrarPedido = async () => {
-    if (!clienteSeleccionado && !ventaAnonima) {
-      mostrarNotificacion("Ingrese un DNI registrado o seleccione venta anónima", "error");
-      return;
-    }
-    if (itemsPedido.length === 0) {
-      mostrarNotificacion("Agregue al menos un producto", "error");
-      return;
-    }
-    if (tipoEntrega === "Delivery" && !direccionEntrega.trim()) {
-      mostrarNotificacion("Ingrese la dirección temporal de entrega", "error");
+    const nuevosErrores = {
+      cliente: !clienteSeleccionado && !ventaAnonima,
+      productos: itemsPedido.length === 0,
+      tipoEntrega: !tipoEntrega,
+      direccion: tipoEntrega === "Delivery" && !direccionEntrega.trim(),
+      metodoPago: !metodoPago,
+      canalVenta: !canalVenta,
+    };
+    setErrores(nuevosErrores);
+    const faltantes = Object.entries(nuevosErrores).filter(([, value]) => value).map(([key]) => ({
+      cliente: "cliente o venta anónima", productos: "productos", tipoEntrega: "tipo de entrega",
+      direccion: "dirección", metodoPago: "método de pago", canalVenta: "canal de venta",
+    }[key]));
+    if (faltantes.length) {
+      mostrarNotificacion(`Complete los campos obligatorios: ${faltantes.join(", ")}`, "error");
       return;
     }
 
     try {
-      const venta = await ventaService.crear({
+      const nuevoPedido = await registrarVentaCompleta({
+        usuario,
+        cliente: clienteSeleccionado,
+        items: itemsPedido,
         tipoEntrega,
         metodoPago,
         canalVenta,
-        total,
-        idUsuario: usuario.id,
-        idCliente: clienteSeleccionado?.id || null,
+        direccionEntrega,
       });
-      await Promise.all(itemsPedido.map((item) => detalleVentaService.crear({
-        idVenta: venta.id,
-        idProducto: item.id,
-        cantidad: item.cantidad,
-        precioUnitario: item.precio,
-        subtotal: item.precio * item.cantidad,
-      })));
-      const delivery = tipoEntrega === "Delivery"
-        ? await deliveryService.crear({ idVenta: venta.id, estadoDelivery: "Pendiente", costoDelivery, direccionEntrega })
-        : null;
-      const nuevoPedido = {
-        ...venta,
-        id: String(venta.id),
-        fecha: new Date(venta.fechaVenta).toLocaleString("es-PE"),
-        cliente: clienteSeleccionado?.nombre || "Venta anónima",
-        direccionCliente: clienteSeleccionado?.direccion || null,
-        delivery,
-        total: Number(venta.total),
-        comprobante: "Pendiente",
-      };
       setPedidos((prev) => [...prev, nuevoPedido]);
       mostrarNotificacion("Pedido registrado correctamente");
       navegar("empleado-home");
@@ -165,7 +163,7 @@ export default function NuevoPedido({
             </div>
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <input className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} placeholder="DNI (8 dígitos)" value={dni} onChange={(e) => manejarDni(e.target.value)} disabled={ventaAnonima} />
+              <input className={`campo-texto ${errores.cliente ? "campo-error" : ""}`} style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} placeholder="DNI (8 dígitos)*" value={dni} onChange={(e) => manejarDni(e.target.value)} disabled={ventaAnonima} />
 
               <input className="campo-texto" style={{ flex: 1, minWidth: 180, padding: "12px", fontSize: "1rem" }} placeholder="Nombre del cliente" value={nombre} readOnly />
 
@@ -189,30 +187,33 @@ export default function NuevoPedido({
                 </button>
               )}
 
-              <select className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
+              <select className={`campo-texto ${errores.metodoPago ? "campo-error" : ""}`} style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={metodoPago} onChange={(e) => { setMetodoPago(e.target.value); setErrores((prev) => ({ ...prev, metodoPago: false })); }}>
+                <option value="">Método de pago*</option>
                 <option>Efectivo</option>
                 <option>Yape</option>
                 <option>Tarjeta</option>
               </select>
 
-              <select className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={tipoEntrega} onChange={(e) => setTipoEntrega(e.target.value)}>
+              <select className={`campo-texto ${errores.tipoEntrega ? "campo-error" : ""}`} style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={tipoEntrega} onChange={(e) => { setTipoEntrega(e.target.value); setErrores((prev) => ({ ...prev, tipoEntrega: false })); }}>
+                <option value="">Tipo de entrega*</option>
                 <option>Recojo</option>
                 <option>Delivery</option>
               </select>
 
-              <select className="campo-texto" style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={canalVenta} onChange={(e) => setCanalVenta(e.target.value)}>
+              <select className={`campo-texto ${errores.canalVenta ? "campo-error" : ""}`} style={{ flex: 1, minWidth: 140, padding: "12px", fontSize: "1rem" }} value={canalVenta} onChange={(e) => { setCanalVenta(e.target.value); setErrores((prev) => ({ ...prev, canalVenta: false })); }}>
+                <option value="">Canal de venta*</option>
                 <option>Presencial</option>
                 <option>WhatsApp</option>
                 <option>Telefono</option>
               </select>
 
               {tipoEntrega === "Delivery" && (
-                <input className="campo-texto" style={{ flex: "1 1 100%", padding: "12px", fontSize: "1rem" }} placeholder={ventaAnonima ? "Dirección temporal de entrega*" : "Dirección de entrega*"} value={direccionEntrega} onChange={(e) => setDireccionEntrega(e.target.value)} />
+                <input className={`campo-texto ${errores.direccion ? "campo-error" : ""}`} style={{ flex: "1 1 100%", padding: "12px", fontSize: "1rem" }} placeholder={ventaAnonima ? "Dirección temporal de entrega*" : "Dirección de entrega*"} value={direccionEntrega} onChange={(e) => { setDireccionEntrega(e.target.value); setErrores((prev) => ({ ...prev, direccion: false })); }} />
               )}
             </div>
           </div>
 
-          <div className="panel-pedido" style={{ padding: 16 }}>
+          <div className={`panel-pedido ${errores.productos ? "panel-error" : ""}`} style={{ padding: 16 }}>
 
             <div style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 12, color: "#555" }}>
               Productos
@@ -315,7 +316,7 @@ export default function NuevoPedido({
                 CANCELAR
               </button>
 
-              <button className="btn-verde" style={{ padding: "10px 12px", fontSize: "0.95rem" }} onClick={registrarPedido} disabled={!nombre || itemsPedido.length === 0}>
+              <button className="btn-verde" style={{ padding: "10px 12px", fontSize: "0.95rem" }} onClick={registrarPedido}>
                 🖨 REGISTRAR
               </button>
             </div>
