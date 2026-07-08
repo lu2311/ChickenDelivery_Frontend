@@ -6,8 +6,12 @@ export default function PantallaLogin({ onLogin }) {
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
+  const [iniciandoSesion, setIniciandoSesion] = useState(false);
 
   const manejarSubmit = async () => {
+    if (iniciandoSesion) return;
+    setIniciandoSesion(true);
+    setError("");
     try {
       const data = await authService.login(usuario, contrasena);
       localStorage.setItem("token", data.token);
@@ -19,6 +23,8 @@ export default function PantallaLogin({ onLogin }) {
       });
     } catch (err) {
       setError(err || "Credenciales incorrectas");
+    } finally {
+      setIniciandoSesion(false);
     }
   };
 
@@ -51,8 +57,8 @@ return (
 
       {error && <div style={{ color: "#c0392b", fontSize: "0.9rem", marginBottom: 10 }}>{error}</div>}
 
-      <button className="btn-primario" style={{ width: "100%", padding: "14px", fontSize: "1rem" }} onClick={manejarSubmit}>
-        INICIAR SESIÓN
+      <button className="btn-primario" style={{ width: "100%", padding: "14px", fontSize: "1rem" }} onClick={manejarSubmit} disabled={iniciandoSesion}>
+        {iniciandoSesion ? "INGRESANDO..." : "INICIAR SESIÓN"}
       </button>
 
       <div style={{ marginTop: 16, fontSize: "0.85rem", color: "#aaa" }}>

@@ -7,6 +7,28 @@ import LayoutAdmin from "./components/data/admin/LayoutAdmin";
 import Notificacion from "./components/data/common/Notificacion";
 import { productoService } from "./services/productoService";
 import { categoriaService, clienteService, promocionService, usuarioService, ventaService } from "./services/resourceServices";
+import { combinarPedidos } from "./utils/mergeOrders";
+
+const CACHE_DURATION = 15 * 60 * 1000;
+
+const claveCache = (usuario) => `chicken-data:${usuario.rol}:${usuario.id}`;
+
+function leerCache(usuario) {
+  try {
+    const cache = JSON.parse(sessionStorage.getItem(claveCache(usuario)));
+    return cache && Date.now() - cache.guardadoEn < CACHE_DURATION ? cache.datos : null;
+  } catch {
+    return null;
+  }
+}
+
+function guardarCache(usuario, datos) {
+  try {
+    sessionStorage.setItem(claveCache(usuario), JSON.stringify({ guardadoEn: Date.now(), datos }));
+  } catch {
+    // La aplicación puede continuar normalmente si el navegador bloquea el almacenamiento.
+  }
+}
 
 export default function App() {
   const [sesionActiva, setSesionActiva] = useState(false);
@@ -33,39 +55,77 @@ export default function App() {
     setRolUsuario(usuario.rol);
 
     setSesionActiva(true);
+    setPantallaActual(usuario.rol === "admin" ? "admin-panel" : "empleado-home");
+
+    const cache = leerCache(usuario) || {};
+    const datosCargados = {
+      productos: cache.productos || [],
+      clientes: cache.clientes || [],
+      pedidos: cache.pedidos || [],
+      usuarios: cache.usuarios || [],
+      promociones: cache.promociones || [],
+      categorias: cache.categorias || [],
+    };
+    setProductos(datosCargados.productos);
+    setClientes(datosCargados.clientes);
+    setPedidos(datosCargados.pedidos);
+    setUsuarios(datosCargados.usuarios);
+    setPromociones(datosCargados.promociones);
+    setCategorias(datosCargados.categorias);
+
+    const cargar = (nombre, peticion, actualizar, transformar = (datos) => datos) => peticion
+      .then((datos) => {
+        const resultado = transformar(datos);
+        if (nombre === "pedidos") {
+          actualizar((pedidosActuales) => {
+            const pedidosCombinados = combinarPedidos(resultado, pedidosActuales);
+            datosCargados[nombre] = pedidosCombinados;
+            guardarCache(usuario, datosCargados);
+            return pedidosCombinados;
+          });
+          return;
+        }
+        datosCargados[nombre] = resultado;
+        actualizar(resultado);
+        guardarCache(usuario, datosCargados);
+      });
+
+    const transformarProductos = (datos) => datos.map((p) => ({
+      ...p,
+      precio: Number(p.precio),
+      categoria: p.nombreCategoria || "Sin categoría",
+    }));
+    const transformarVentas = (datos) => datos.map((v) => ({
+      ...v,
+      id: String(v.id),
+      fecha: v.fechaVenta ? new Date(v.fechaVenta).toLocaleString("es-PE") : "",
+      cliente: v.nombreCliente || "Sin cliente",
+      total: Number(v.total),
+      comprobanteData: v.comprobante || null,
+      comprobante: v.comprobante?.tipoComprobante || "Pendiente",
+    }));
+    const transformarPromociones = (datos) => datos.map((p) => ({
+      ...p,
+      precioCombo: Number(p.precioCombo),
+    }));
 
     try {
-      const [productosApi, clientesApi, ventasApi, usuariosApi, promocionesApi, categoriasApi] = await Promise.all([
-        productoService.listar(),
-        clienteService.listar(),
-        ventaService.listar(),
-        usuarioService.listar(),
-        promocionService.listar(),
-        categoriaService.listar(),
-      ]);
-      setProductos(productosApi.map((p) => ({ ...p, precio: Number(p.precio), categoria: p.nombreCategoria || "Sin categoría" })));
-      setClientes(clientesApi);
-      setPedidos(ventasApi.map((v) => ({
-        ...v,
-        id: String(v.id),
-        fecha: v.fechaVenta ? new Date(v.fechaVenta).toLocaleString("es-PE") : "",
-        cliente: v.nombreCliente || "Sin cliente",
-        total: Number(v.total),
-        comprobanteData: v.comprobante || null,
-        comprobante: v.comprobante?.tipoComprobante || "Pendiente",
-      })));
-      setUsuarios(usuariosApi);
-      setPromociones(promocionesApi.map((p) => ({ ...p, precioCombo: Number(p.precioCombo) })));
-      setCategorias(categoriasApi);
+      const cargasComunes = [
+        cargar("productos", productoService.listar(), setProductos, transformarProductos),
+        cargar("pedidos", ventaService.listar(), setPedidos, transformarVentas),
+        cargar("promociones", promocionService.listar(), setPromociones, transformarPromociones),
+      ];
+      const cargasPorRol = usuario.rol === "admin"
+        ? [
+            cargar("usuarios", usuarioService.listar(), setUsuarios),
+            cargar("categorias", categoriaService.listar(), setCategorias),
+          ]
+        : [cargar("clientes", clienteService.listar(), setClientes)];
+
+      await Promise.all([...cargasComunes, ...cargasPorRol]);
     } catch (error) {
       mostrarNotificacion(error || "No se pudieron cargar los datos");
     }
-
-    setPantallaActual(
-      usuario.rol === "admin"
-        ? "admin-panel"
-        : "empleado-home"
-    );
   };
 
 const manejarSalir = () => {

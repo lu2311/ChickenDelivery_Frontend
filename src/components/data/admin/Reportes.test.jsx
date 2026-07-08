@@ -26,3 +26,20 @@ test("genera y descarga el reporte PDF", () => {
   expect(jsPDF).toHaveBeenCalled();
   expect(notify).toHaveBeenCalledWith("Reporte PDF descargado correctamente");
 });
+
+test("ventas del día suma únicamente las ventas de hoy en Lima", () => {
+  jest.useFakeTimers().setSystemTime(new Date("2026-07-07T17:00:00Z"));
+
+  render(<Reportes
+    pedidos={[
+      { id: 1, fechaVenta: "2026-07-07T10:00:00", total: 25 },
+      { id: 2, fechaVenta: "2026-07-06T20:00:00", total: 100 },
+    ]}
+    productos={[]}
+    mostrarNotificacion={jest.fn()}
+  />);
+
+  expect(screen.getByText("Ventas del día").parentElement.textContent).toContain("S/25.00");
+  expect(screen.getByText("Pedidos Registrados").parentElement.textContent).toContain("1");
+  jest.useRealTimers();
+});

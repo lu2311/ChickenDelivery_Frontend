@@ -8,12 +8,18 @@ export default function HistorialPedidos({ navegar, pedidos }) {
   const [fechaFin, setFechaFin] = useState("");
 
   const pedidosFiltrados = pedidos.filter((p) => {
-    const coincideBusqueda = p.cliente.toLowerCase().includes(busqueda.toLowerCase()) || String(p.id).includes(busqueda);
+    const coincideBusqueda = (p.cliente || "").toLowerCase().includes(busqueda.toLowerCase()) || String(p.id).includes(busqueda);
     const fecha = p.fechaVenta ? new Date(p.fechaVenta) : null;
     if (!coincideBusqueda) return false;
     if (fechaInicio && (!fecha || fecha < new Date(`${fechaInicio}T00:00:00`))) return false;
     if (fechaFin && (!fecha || fecha > new Date(`${fechaFin}T23:59:59`))) return false;
     return true;
+  }).sort((a, b) => {
+    const fechaA = new Date(a.fechaVenta).getTime();
+    const fechaB = new Date(b.fechaVenta).getTime();
+    const diferenciaFecha = (Number.isNaN(fechaB) ? 0 : fechaB) - (Number.isNaN(fechaA) ? 0 : fechaA);
+
+    return diferenciaFecha || Number(b.id) - Number(a.id);
   });
 
   return (

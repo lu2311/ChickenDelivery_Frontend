@@ -1,5 +1,9 @@
+import { esVentaDeHoyEnLima } from "../../../utils/limaDate";
+
 export default function AdminPanel({ pedidos, productos }) {
-  const ventasTotal = pedidos.reduce((s, p) => s + p.total, 0);
+  const ventasTotal = pedidos
+    .filter((pedido) => esVentaDeHoyEnLima(pedido))
+    .reduce((total, pedido) => total + Number(pedido.total || 0), 0);
   const productosActivos = productos.filter((p) => p.estado).length;
 
   return (
