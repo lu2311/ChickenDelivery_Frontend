@@ -2,9 +2,11 @@ import usuarios from '../icons/usuarios.png';
 import historial from '../icons/historial.png';
 import comprobante from '../icons/comprobante.png';
 import VentaChat from './VentaChat';
+import { esVentaDeHoyEnLima } from '../../../utils/limaDate';
 
 export default function EmpleadoHome({ navegar, pedidos, usuario, clientes, productos, promociones, setPedidos, mostrarNotificacion }) {
-  const ventasHoy = pedidos.reduce((s, p) => s + p.total, 0);
+  const pedidosHoy = pedidos.filter((pedido) => esVentaDeHoyEnLima(pedido));
+  const ventasHoy = pedidosHoy.reduce((total, pedido) => total + Number(pedido.total || 0), 0);
   return (
     <div className="employee-home-grid">
       <div className="employee-home-main">
@@ -17,7 +19,7 @@ export default function EmpleadoHome({ navegar, pedidos, usuario, clientes, prod
       <div style={{ marginBottom: 24, display: "flex", gap: 14 }}>
         <div className="tarjeta-stat" style={{ padding: "16px 18px" }}>
           <div className="etiqueta" style={{ fontSize: "1.2rem" }}>Pedidos de Hoy</div>
-          <div className="valor" style={{ fontSize: "1.6rem" }}>{pedidos.length}</div>
+          <div className="valor" style={{ fontSize: "1.6rem" }}>{pedidosHoy.length}</div>
         </div>
 
         <div className="tarjeta-stat" style={{ padding: "16px 18px" }}>

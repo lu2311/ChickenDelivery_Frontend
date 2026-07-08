@@ -128,7 +128,7 @@ export default function LayoutAdmin({
         )}
 
         {pantalla === "admin-prediccion" && (
-          <Prediccion />
+          <Prediccion pedidos={pedidos} />
         )}
       </div>
     </>

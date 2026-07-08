@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { jsPDF } from "jspdf";
 import descargas from '../icons/descargas.png';
+import { esVentaDeHoyEnLima } from "../../../utils/limaDate";
 
 export default function Reportes({ pedidos, productos, mostrarNotificacion }) {
   const [fechaInicio, setFechaInicio] = useState("");
@@ -13,7 +14,10 @@ export default function Reportes({ pedidos, productos, mostrarNotificacion }) {
     if (fechaFin && fecha > new Date(`${fechaFin}T23:59:59`)) return false;
     return true;
   });
-  const ventasTotal = pedidosFiltrados.reduce((s, p) => s + p.total, 0);
+  const ventasPeriodo = pedidosFiltrados.reduce((s, p) => s + Number(p.total || 0), 0);
+  const pedidosHoy = pedidos.filter((pedido) => esVentaDeHoyEnLima(pedido));
+  const ventasHoy = pedidosHoy
+    .reduce((total, pedido) => total + Number(pedido.total || 0), 0);
   const productosActivos = productos.filter((p) => p.estado).length;
 
   const masVendidos = Object.values(pedidosFiltrados.flatMap((pedido) => pedido.detalles || []).reduce((acumulado, detalle) => {
@@ -61,7 +65,7 @@ export default function Reportes({ pedidos, productos, mostrarNotificacion }) {
 
       y += 12;
       const cards = [
-        ["Ventas", money(ventasTotal)],
+        ["Ventas", money(ventasPeriodo)],
         ["Pedidos", String(pedidosFiltrados.length)],
         ["Productos activos", String(productosActivos)],
       ];
@@ -147,12 +151,12 @@ export default function Reportes({ pedidos, productos, mostrarNotificacion }) {
 
       <div className="tarjeta-stat">
         <div className="etiqueta">Ventas del día</div>
-        <div className="valor" style={{ fontSize: "1.6rem" }}>S/{ventasTotal.toFixed(2)}</div>
+        <div className="valor" style={{ fontSize: "1.6rem" }}>S/{ventasHoy.toFixed(2)}</div>
       </div>
 
       <div className="tarjeta-stat">
         <div className="etiqueta">Pedidos Registrados</div>
-        <div className="valor">{pedidosFiltrados.length}</div>
+        <div className="valor">{pedidosHoy.length}</div>
       </div>
 
       <div className="tarjeta-stat">
