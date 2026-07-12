@@ -11,13 +11,15 @@ export default function EmitirComprobante({
   setPedidos,
   mostrarNotificacion,
 }) {
+  const pedidosInvertidos = [...pedidos].reverse();
+  const ultimoPedido = pedidosInvertidos[0];
   const [tipoComprobante, setTipoComprobante] = useState("Boleta");
-  const [nombreCliente, setNombreCliente] = useState(pedidos[0]?.cliente || "");
+  const [nombreCliente, setNombreCliente] = useState(ultimoPedido?.cliente || "");
   const [razonSocial, setRazonSocial] = useState("");
   const [ruc, setRuc] = useState("");
-  const [direccion, setDireccion] = useState(pedidos[0]?.delivery?.direccionEntrega || pedidos[0]?.direccionCliente || "");
+  const [direccion, setDireccion] = useState(ultimoPedido?.delivery?.direccionEntrega || ultimoPedido?.direccionCliente || "");
 
-  const [pedidoId, setPedidoId] = useState(pedidos[0]?.id || "");
+  const [pedidoId, setPedidoId] = useState(ultimoPedido?.id || "");
   const pedidoSeleccionado = pedidos.find((pedido) => String(pedido.id) === String(pedidoId)) || null;
   const direccionPedido = pedidoSeleccionado?.delivery?.direccionEntrega || pedidoSeleccionado?.direccionCliente || "No registrada";
 
@@ -145,7 +147,7 @@ export default function EmitirComprobante({
 
         <div className="form-comprobante" style={{ minWidth: 260 }}>
           <select className="campo-texto" style={{ marginBottom: 18 }} value={pedidoId} onChange={(e) => seleccionarPedido(e.target.value)}>
-            {pedidos.map((pedido) => <option key={pedido.id} value={pedido.id}>Pedido #{pedido.id} - {pedido.cliente}</option>)}
+            {pedidosInvertidos.map((pedido) => <option key={pedido.id} value={pedido.id}>Pedido #{pedido.id} - {pedido.cliente}</option>)}
           </select>
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 12, color: "#555" }}>
