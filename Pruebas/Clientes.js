@@ -35,5 +35,5 @@ export default function () {
     check(res,{
         'clientes ok':(r)=>r.status===200
     });
-
 }
+

@@ -1,22 +1,14 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
-export const options = {
-
+export const options = {    
     stages: [
-
         { duration: '30s', target: 20 },
-
         { duration: '30s', target: 100 },
-
         { duration: '30s', target: 200 },
-
         { duration: '30s', target: 300 },
-
         { duration: '30s', target: 0 }
-
     ]
-
 };
 
 export default function () {
@@ -48,5 +40,7 @@ export default function () {
     check(res,{
         'status 200':(r)=>r.status===200
     });
-
 }
+
+
+

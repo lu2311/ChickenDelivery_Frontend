@@ -11,7 +11,7 @@ export default function LayoutEmpleado({ pantalla, navegar, onSalir, clientes, s
     <>
       <VoiceflowChat />
 
-      <BarraSuperior titulo="Ikigai Deli Express - Empleado" usuario="Juan Pérez" onSalir={onSalir} />
+      <BarraSuperior titulo="Ikigai Deli Express - Empleado" onSalir={onSalir} />
 
       <div className="contenido-centrado">
         {pantalla === "empleado-home" && <EmpleadoHome navegar={navegar} pedidos={pedidos} usuario={usuario} clientes={clientes} productos={productos} promociones={promociones} setPedidos={setPedidos} mostrarNotificacion={mostrarNotificacion} />}

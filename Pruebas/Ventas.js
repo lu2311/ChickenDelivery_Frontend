@@ -36,3 +36,4 @@ export default function () {
         'productos OK': (r) => r.status === 200
     });
 }
+

@@ -65,7 +65,9 @@ export default function VentaChat({ clientes, productos, promociones = [], usuar
     })),
   ], [productos, promociones]);
 
-  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
+useEffect(() => {
+  bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+}, [messages]);
 
   const addBot = (text, actions = []) => {
     setMessages((previous) => [...previous, { from: "bot", text, actions }]);
