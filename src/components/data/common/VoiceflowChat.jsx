@@ -11,7 +11,7 @@ export default function VoiceflowChat() {
       if (window.voiceflow) {
         window.voiceflow.chat.load({
           verify: {
-            projectID: "6a28d7f9cfdfc5daea811967",
+            projectID: "6a547c729f836fb4442fc51b",
           },
           url: "https://general-runtime.voiceflow.com",
           voice: {
